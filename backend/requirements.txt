@@ -1,0 +1,14 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+httpx==0.28.1
+python-dotenv==1.1.0
+urllib3==1.26.20
+eval_type_backport==0.2.2
+rapidfuzz==3.13.0
+rank-bm25==0.2.2
+scispacy==0.5.5
+openai>=1.70.0
+instructor>=1.7.0
+chromadb>=0.5.23
+sentence-transformers>=3.4.1
+https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_sm-0.5.4.tar.gz

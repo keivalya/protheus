@@ -1,0 +1,50 @@
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+backend/.venv/
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+frontend/vite.config.d.ts
+frontend/vite.config.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local runtime data and generated indexes
+backend/app/data/*.sqlite3
+backend/app/data/*.sqlite3-*
+backend/app/data/chroma/
+backend/app/data/grounding_corpus/
+backend/app/data/validation_corpus/
+backend/app/data/observability/
+backend/app/data/evaluations/
+
+# Keep this repo free of GitHub Actions workflows for now.
+.github/workflows/
