@@ -505,10 +505,6 @@ function ProtocolDraft({
             <span className="k">Safety</span>
             <span className="v">{protocol.safety_review.risk_level.replace(/_/g, " ")}</span>
           </div>
-          <div className="stat">
-            <span className="k">Version</span>
-            <span className="v">v{version.version_number}</span>
-          </div>
         </div>
       </div>
       <div className="protocol-sections">

@@ -409,8 +409,8 @@ a:hover { text-decoration: underline; }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); display: inline-block; }
 .plan-hero h2 { font-family: "Fraunces", serif; font-weight: 360; font-size: 34px; line-height: 1.12; letter-spacing: -.02em; margin: 0 0 8px; max-width: 26ch; }
 .blurb { color: var(--muted); max-width: 65ch; font-size: 14.5px; margin: 0; }
-.plan-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
-.stat { display: flex; flex-direction: column; gap: 2px; }
+.plan-stats { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
+.stat { display: flex; flex-direction: column; gap: 2px; flex: 1 1 0; min-width: 0; }
 .stat .k { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .stat .v { font-family: "Fraunces", serif; font-size: 24px; font-weight: 400; letter-spacing: -.015em; color: var(--ink); }
 .stat .v small { font-size: 12px; color: var(--muted); margin-left: 4px; font-family: "DM Sans", sans-serif; font-weight: 400; }
@@ -621,11 +621,15 @@ table.materials .m-cost { font-family: "IBM Plex Mono", monospace; font-size: 13
   z-index: -1;
 }
 .pdf-doc {
-  width: 794px; /* ~A4 portrait at 96 DPI */
+  /* A4 portrait at 96 DPI is 794px; subtract 2x10mm margins (~76px)
+   * so html2pdf's auto-scaled placement fits within page bounds. */
+  width: 720px;
   background: #ffffff;
-  padding: 32px 36px 40px;
+  padding: 28px 30px 32px;
   color: var(--ink);
   font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 .pdf-doc .pdf-hero { padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
 .pdf-doc .pdf-eyebrow {
@@ -685,8 +689,15 @@ table.materials .m-cost { font-family: "IBM Plex Mono", monospace; font-size: 13
 .pdf-doc .gantt { padding: 14px 16px; }
 .pdf-doc .gantt-grid { min-width: 0; }
 .pdf-doc .gantt-head,
-.pdf-doc .gantt-row { grid-template-columns: 160px repeat(var(--weeks, 10), 1fr); }
-.pdf-doc .gantt-row::after { left: 160px; }
+.pdf-doc .gantt-row { grid-template-columns: 130px repeat(var(--weeks, 10), 1fr); }
+.pdf-doc .gantt-row::after { left: 130px; }
+.pdf-doc .gantt-bar { font-size: 9.5px; padding: 0 7px; }
+.pdf-doc .gantt-row .label { font-size: 12px; padding-right: 10px; }
+.pdf-doc .gantt-row .label small { font-size: 10px; }
+.pdf-doc .budget-grid { gap: 16px; }
+.pdf-doc .budget-summary { padding: 20px 20px 18px; }
+.pdf-doc .budget-total { font-size: 40px; }
+.pdf-doc .budget-total .currency { font-size: 22px; vertical-align: 16px; }
 .pdf-doc .protocol-step { box-shadow: none; }
 .pdf-doc .table-wrap { overflow: hidden; }
 .pdf-doc table.materials { min-width: 0; font-size: 11.5px; }

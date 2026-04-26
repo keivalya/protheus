@@ -55,9 +55,14 @@ async function exportToPdf(node: HTMLElement, planTitle: string) {
       };
     };
     const opts = {
-      margin: [12, 12, 16, 12],
+      margin: [10, 10, 12, 10],
       filename: `Protheus-${slug}.pdf`,
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        windowWidth: 720,
+      },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-avoid-break"] },
     };
