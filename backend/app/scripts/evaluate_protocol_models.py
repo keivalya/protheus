@@ -152,10 +152,9 @@ def _evaluate_one(case: dict[str, Any], model: str, reasoning_effort: str) -> di
     section_source_ids = _protocol_source_ids(draft)
 
     return {
-        "model": draft.generation_model or protocol_generation_model(),
-        "reasoning_effort": draft.reasoning_effort or protocol_reasoning_effort(),
-        "generation_backend": draft.generation_backend or protocol_generation_backend(),
-        "generation_error": draft.generation_error,
+        "model": protocol_generation_model(),
+        "reasoning_effort": protocol_reasoning_effort(),
+        "generation_backend": protocol_generation_backend(),
         "elapsed_seconds": elapsed_seconds,
         "selected_protocol_title": case["selected_protocol"].get("title"),
         "target_protocol_rank": case["target_protocol_rank"],

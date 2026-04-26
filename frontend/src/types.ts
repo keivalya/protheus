@@ -206,6 +206,10 @@ export type CustomProtocolDraft = {
   reference_examples_used: CorpusExampleReference[];
   validated_entities: EntityValidation[];
   extracted_protocol_evidence: ExtractedProtocolEvidence[];
+  generation_backend?: string | null;
+  generation_model?: string | null;
+  reasoning_effort?: string | null;
+  generation_error?: string | null;
 };
 
 export type ProtocolVersion = {
@@ -328,7 +332,11 @@ export type SupplyChainItem = {
   source_ids: string[];
   supplier_candidates: SupplierCandidate[];
   notes: string[];
-  budget_status?: "included" | "missing_price" | "missing_quantity" | "missing_price_and_quantity";
+  budget_status?:
+    | "included"
+    | "missing_price"
+    | "missing_quantity"
+    | "missing_price_and_quantity";
   item_cost_range?: MoneyRange;
 };
 

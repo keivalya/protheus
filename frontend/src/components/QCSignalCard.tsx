@@ -56,6 +56,8 @@ export function QCSignalCard({ qc }: QCSignalCardProps) {
           </div>
         </div>
       </div>
+      <p className="mt-4 text-sm leading-6 text-slate-700">{qc.explanation}</p>
     </section>
   );
 }
+

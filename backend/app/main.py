@@ -10,13 +10,14 @@ from app.services.feedback_memory_index import index_feedback_memories
 from app.services.hypothesis import structure_hypothesis
 from app.services.observability import flush_observability, observability_status
 from app.services.openalex import search_papers
+from app.services.operational_plan import compile_operational_plan
 from app.services.protocol_db import (
     create_feedback_memories_for_session,
     create_protocol_feedback,
     create_protocol_session,
     emit_transparency_event,
-    get_operational_plan,
     get_latest_protocol_version,
+    get_operational_plan,
     list_transparency_events,
     get_protocol_session_detail,
     get_protocol_session_record,
@@ -26,7 +27,6 @@ from app.services.protocol_db import (
     save_operational_plan,
     stop_protocol_session,
 )
-from app.services.operational_plan import compile_operational_plan
 from app.services.protocol_models import (
     OperationalPlanRequest,
     ProtocolAcceptRequest,
@@ -52,7 +52,7 @@ from app.services.ranking import rank_results
 load_dotenv()
 init_protocol_tables()
 
-app = FastAPI(title="AI Scientist Lite", version="0.1.0")
+app = FastAPI(title="Protheus API", version="0.1.0")
 MAX_PROTOCOL_VERSIONS = 3
 
 app.add_middleware(

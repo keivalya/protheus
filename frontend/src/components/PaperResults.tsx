@@ -57,6 +57,7 @@ export function PaperResults({ papers }: PaperResultsProps) {
                     ) : null}
                   </div>
                 </div>
+                <p className="mt-3 text-sm leading-6 text-slate-700">{paper.match_reason}</p>
               </div>
             </article>
           ))}

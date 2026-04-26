@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from app.services.protocol_models import SafetyReview
@@ -42,15 +41,6 @@ EXPERT_REVIEW_TERMS = {
 }
 
 
-NEGATED_ANIMAL_PATTERNS = [
-    "without animal",
-    "no animal",
-    "non-animal",
-    "animal-model surrogates",
-    "animal model surrogates",
-]
-
-
 def _flatten_text(*values: Any) -> str:
     parts: list[str] = []
     for value in values:
@@ -65,11 +55,6 @@ def _flatten_text(*values: Any) -> str:
     return " ".join(parts).lower()
 
 
-def _contains_term(text: str, term: str) -> bool:
-    escaped = re.escape(term.lower()).replace(r"\ ", r"\s+")
-    return re.search(rf"\b{escaped}\b", text) is not None
-
-
 def classify_protocol_safety(
     original_query: str,
     structured_hypothesis: dict[str, Any],
@@ -78,7 +63,7 @@ def classify_protocol_safety(
 ) -> SafetyReview:
     text = _flatten_text(original_query, structured_hypothesis, selected_protocols, lab_context)
 
-    blocked_flags = sorted({flag for term, flag in BLOCKED_TERMS.items() if _contains_term(text, term)})
+    blocked_flags = sorted({flag for term, flag in BLOCKED_TERMS.items() if term in text})
     if blocked_flags:
         return SafetyReview(
             risk_level="blocked_or_redacted",
@@ -90,9 +75,7 @@ def classify_protocol_safety(
             ],
         )
 
-    expert_flags = sorted({flag for term, flag in EXPERT_REVIEW_TERMS.items() if _contains_term(text, term)})
-    if "animal studies" in expert_flags and any(pattern in text for pattern in NEGATED_ANIMAL_PATTERNS):
-        expert_flags = [flag for flag in expert_flags if flag != "animal studies"]
+    expert_flags = sorted({flag for term, flag in EXPERT_REVIEW_TERMS.items() if term in text})
     if expert_flags:
         return SafetyReview(
             risk_level="needs_expert_review",
@@ -110,3 +93,4 @@ def classify_protocol_safety(
         requires_expert_review=False,
         notes=["No high-risk signals were detected by the local heuristic safety classifier."],
     )
+
