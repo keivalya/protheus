@@ -5,6 +5,8 @@ import {
   generateProtocolDraft,
   runLiteratureQC,
 } from "./api";
+import FullPlan from "./components/FullPlan";
+import { buildPlanFromContext, type Plan } from "./lib/planMock";
 import type {
   CustomProtocolDraft,
   LiteratureQCResponse,
@@ -528,6 +530,7 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeVersion, setActiveVersion] = useState<ProtocolVersion | null>(null);
   const [accepted, setAccepted] = useState(false);
+  const [plan, setPlan] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<{
     title: string;
@@ -632,6 +635,14 @@ export default function App() {
     });
     try {
       await acceptProtocol(sessionId, activeVersion.id);
+      const builtPlan = buildPlanFromContext({
+        question: result?.query || query,
+        draftTitle: activeVersion.protocol.title,
+        basedOn: selectedProtocol
+          ? (result?.papers.find((p) => p.title) ?? null)
+          : null,
+      });
+      setPlan(builtPlan);
       setAccepted(true);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Approval failed.");
@@ -647,6 +658,7 @@ export default function App() {
     setActiveVersion(null);
     setSessionId(null);
     setAccepted(false);
+    setPlan(null);
     setPickStage("novelty");
     setError(null);
     setLoading(null);
@@ -721,9 +733,11 @@ export default function App() {
               )
             ) : null}
 
-            {activeVersion ? (
+            {activeVersion && !accepted ? (
               <ProtocolDraft version={activeVersion} onAccept={handleAccept} isBusy={isBusy} />
             ) : null}
+
+            {accepted && plan ? <FullPlan plan={plan} /> : null}
           </section>
         )}
       </main>
