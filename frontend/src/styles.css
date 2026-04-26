@@ -595,6 +595,35 @@ table.materials .m-cost { font-family: "IBM Plex Mono", monospace; font-size: 13
 .fund-amount small { display: block; font-size: 11px; color: var(--muted); font-family: "IBM Plex Mono", monospace; letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
 .fund-link { display: inline-flex; align-items: center; gap: 4px; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--accent); margin-top: 6px; }
 
+/* Operational-plan banners (warnings + assumptions) */
+.op-banner {
+  margin-top: 18px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.op-banner + .op-banner { margin-top: 10px; }
+.op-banner-warn { background: var(--warn-bg); border-color: var(--warn-bd); }
+.op-banner-warn .op-banner-title { color: var(--warn-ink); }
+.op-banner-info { background: var(--bg-tint); border-color: var(--line); }
+.op-banner-title {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+.op-banner ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+.op-banner li + li { margin-top: 4px; }
+
 /* Plan actions bar */
 .plan-actions { margin-top: 28px; display: flex; gap: 10px; align-items: center; padding: 18px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; flex-wrap: wrap; }
 .plan-actions .meta { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); }

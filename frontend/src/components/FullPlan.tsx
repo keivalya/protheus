@@ -6,6 +6,7 @@ import {
   type MaterialTag,
   type Plan,
 } from "../lib/planMock";
+import type { OperationalPlanResponse } from "../types";
 
 const TABS = [
   { id: "protocol", label: "Protocol" },
@@ -398,7 +399,13 @@ function FundingPanel({ plan }: { plan: Plan }) {
   );
 }
 
-export default function FullPlan({ plan }: { plan: Plan }) {
+export default function FullPlan({
+  plan,
+  operationalPlan,
+}: {
+  plan: Plan;
+  operationalPlan?: OperationalPlanResponse | null;
+}) {
   const [tab, setTab] = useState<TabId>("protocol");
   const [exporting, setExporting] = useState(false);
   const pdfRef = useRef<HTMLDivElement>(null);
@@ -477,6 +484,27 @@ export default function FullPlan({ plan }: { plan: Plan }) {
           ))}
         </nav>
       </header>
+
+      {operationalPlan && operationalPlan.warnings.length ? (
+        <div className="op-banner op-banner-warn">
+          <div className="op-banner-title">Operational plan warnings</div>
+          <ul>
+            {operationalPlan.warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {operationalPlan && operationalPlan.assumptions.length ? (
+        <div className="op-banner op-banner-info">
+          <div className="op-banner-title">Plan assumptions</div>
+          <ul>
+            {operationalPlan.assumptions.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className={`tab-panel ${tab === "protocol" ? "is-active" : ""}`} role="tabpanel">
         {tab === "protocol" ? <ProtocolPanel plan={plan} /> : null}

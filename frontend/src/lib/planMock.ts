@@ -1,4 +1,11 @@
-import type { Paper } from "../types";
+import type {
+  BudgetBreakdownItem as RealBudgetBreakdownItem,
+  BudgetSummary as RealBudgetSummary,
+  OperationalPlanResponse,
+  Paper,
+  SupplyChainItem,
+  TimelineTask,
+} from "../types";
 
 export type MaterialTag = "critical" | "standard" | "bulk";
 
@@ -637,3 +644,186 @@ export function fmtGenerated(date = new Date()): string {
     minute: "2-digit",
   })}`.replace(/\b([a-z])/g, (m) => m.toUpperCase());
 }
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$",
+  GBP: "£",
+  EUR: "€",
+  CAD: "C$",
+  AUD: "A$",
+};
+
+function symbolFor(currency: string | undefined | null): string {
+  if (!currency) return "$";
+  return CURRENCY_SYMBOLS[currency] || `${currency} `;
+}
+
+function categoryLabel(category: string): string {
+  return category
+    .replace(/_/g, " ")
+    .replace(/\band\b/gi, "&")
+    .replace(/\b([a-z])/g, (m) => m.toUpperCase());
+}
+
+function categoryToTag(category: string): MaterialTag {
+  const c = category.toLowerCase();
+  if (c.includes("equipment")) return "bulk";
+  if (c.includes("consumable") || c.includes("kits")) return "standard";
+  if (c.includes("cell") || c.includes("biological") || c.includes("reagent")) return "critical";
+  return "standard";
+}
+
+function parseQty(quantity: string): number {
+  const match = quantity.match(/-?\d+(?:\.\d+)?/);
+  if (!match) return 1;
+  const value = Number(match[0]);
+  return Number.isFinite(value) && value > 0 ? Math.max(1, Math.round(value)) : 1;
+}
+
+function rangeMid(min?: number | null, max?: number | null): number {
+  if (min == null && max == null) return 0;
+  if (min == null) return max ?? 0;
+  if (max == null) return min ?? 0;
+  return (min + max) / 2;
+}
+
+function fmtCurrency(value: number, sym: string): string {
+  if (!Number.isFinite(value) || value <= 0) return "—";
+  return `${sym}${fmtNumber(value, 0)}`;
+}
+
+function supplyChainToMaterials(items: SupplyChainItem[]): PlanMaterial[] {
+  return items.map((item) => {
+    const top = item.supplier_candidates[0];
+    const cost = rangeMid(item.item_cost_range?.min, item.item_cost_range?.max)
+      || rangeMid(top?.estimated_price_range?.min, top?.estimated_price_range?.max);
+    return {
+      name: item.item_name,
+      spec: top?.package_size || item.quantity_needed || "",
+      catalog: top?.catalog_number || "—",
+      supplier: top?.vendor || "—",
+      qty: parseQty(item.quantity_needed),
+      cost,
+      tag: categoryToTag(item.category),
+    };
+  });
+}
+
+function budgetSummaryToBudget(
+  summary: RealBudgetSummary,
+  breakdown: RealBudgetBreakdownItem[],
+): Plan["budget"] {
+  const totals = breakdown.map((row) => rangeMid(row.min, row.max));
+  const grandTotal = totals.reduce((a, b) => a + b, 0);
+  const sym = symbolFor(summary.estimated_total_range.currency);
+  const rows: BudgetRow[] = breakdown.map((row, idx) => {
+    const amount = totals[idx] || 0;
+    const pct = grandTotal > 0 ? Math.round((amount / grandTotal) * 100) : 0;
+    return {
+      label: row.label,
+      amount,
+      pct,
+      colorIndex: ((idx % 5) + 1) as BudgetRow["colorIndex"],
+    };
+  });
+  return {
+    rows,
+    metrics: {
+      costPerUnit: summary.priced_items
+        ? `${sym}${fmtNumber(grandTotal / summary.priced_items, 0)} / item`
+        : "—",
+      costPerWeek: "—",
+      leadTime: summary.notes[0] ? "See notes" : "—",
+      reorderRisk:
+        summary.confidence === "high"
+          ? "Low"
+          : summary.confidence === "medium"
+          ? "Medium"
+          : "High",
+    },
+    contextNote:
+      summary.priced_items === summary.total_items
+        ? "All extracted line items have at least one supplier price."
+        : `${summary.priced_items} of ${summary.total_items} line items have a price; ${summary.missing_prices} need procurement confirmation.`,
+    footerLeft: `Quoted prices · ${summary.estimated_total_range.currency} · ex VAT`,
+  };
+}
+
+function timelineTasksToPhases(tasks: TimelineTask[]): Plan["timeline"] {
+  if (!tasks.length) {
+    return { weeks: 1, phases: [], milestones: [] };
+  }
+  const starts = tasks
+    .map((t) => Date.parse(t.scheduled_start))
+    .filter((n) => !Number.isNaN(n));
+  const ends = tasks
+    .map((t) => Date.parse(t.scheduled_end))
+    .filter((n) => !Number.isNaN(n));
+  if (!starts.length || !ends.length) {
+    return { weeks: 1, phases: [], milestones: [] };
+  }
+  const planStart = Math.min(...starts);
+  const planEnd = Math.max(...ends);
+  const dayMs = 1000 * 60 * 60 * 24;
+  const totalDays = Math.max(1, Math.ceil((planEnd - planStart) / dayMs));
+  const weeks = Math.max(1, Math.ceil(totalDays / 7));
+
+  const byPhase = new Map<string, TimelineTask[]>();
+  for (const t of tasks) {
+    const arr = byPhase.get(t.phase) || [];
+    arr.push(t);
+    byPhase.set(t.phase, arr);
+  }
+
+  const phases: Phase[] = Array.from(byPhase.entries()).map(([name, group], idx) => {
+    const phaseStart = Math.min(...group.map((t) => Date.parse(t.scheduled_start)).filter((n) => !Number.isNaN(n)));
+    const phaseEnd = Math.max(...group.map((t) => Date.parse(t.scheduled_end)).filter((n) => !Number.isNaN(n)));
+    const startWeek = Math.max(0, Math.floor((phaseStart - planStart) / dayMs / 7));
+    const span = Math.max(1, Math.ceil((phaseEnd - phaseStart) / dayMs / 7));
+    return {
+      name,
+      subtitle: `${group.length} task${group.length === 1 ? "" : "s"}`,
+      startWeek,
+      duration: span,
+      colorIndex: (idx % 5) + 1,
+      label: name,
+    };
+  });
+
+  return { weeks, phases, milestones: [] };
+}
+
+export function mergeOperationalPlan(plan: Plan, op: OperationalPlanResponse | null): Plan {
+  if (!op) return plan;
+  const sym = symbolFor(op.budget_summary.estimated_total_range.currency);
+  const totalMax = op.budget_summary.estimated_total_range.max ?? 0;
+  const totalMin = op.budget_summary.estimated_total_range.min ?? totalMax;
+  const total = totalMax || totalMin || 0;
+
+  const realMaterials = supplyChainToMaterials(op.supply_chain_items);
+  const realBudget = budgetSummaryToBudget(op.budget_summary, op.budget_breakdown);
+  const realTimeline = timelineTasksToPhases(op.timeline);
+
+  return {
+    ...plan,
+    stats: {
+      ...plan.stats,
+      budgetTotal: total > 0 ? Math.round(total) : plan.stats.budgetTotal,
+      currency: op.budget_summary.estimated_total_range.currency || plan.stats.currency,
+      currencySymbol: sym,
+      durationWeeks: realTimeline.weeks || plan.stats.durationWeeks,
+      materialsCount: op.supply_chain_items.length || plan.stats.materialsCount,
+      phases: realTimeline.phases.length || plan.stats.phases,
+      confidence: categoryLabel(op.budget_summary.confidence),
+      confidenceReason: op.budget_summary.notes[0] || plan.stats.confidenceReason,
+    },
+    materials: realMaterials.length ? realMaterials : plan.materials,
+    budget: op.budget_breakdown.length ? realBudget : plan.budget,
+    timeline: realTimeline.phases.length
+      ? { ...realTimeline, milestones: plan.timeline.milestones }
+      : plan.timeline,
+  };
+}
+
+export type { OperationalPlanResponse };
+

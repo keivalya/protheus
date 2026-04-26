@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   acceptProtocol,
+  createOperationalPlan,
   createProtocolSession,
   generateProtocolDraft,
   runLiteratureQC,
 } from "./api";
 import FullPlan from "./components/FullPlan";
-import { buildPlanFromContext, type Plan } from "./lib/planMock";
+import { buildPlanFromContext, mergeOperationalPlan, type Plan } from "./lib/planMock";
 import type {
   CustomProtocolDraft,
   LiteratureQCResponse,
   NoveltySignal,
+  OperationalPlanResponse,
   Paper,
   Protocol,
   ProtocolSection,
@@ -557,6 +559,7 @@ export default function App() {
   const [activeVersion, setActiveVersion] = useState<ProtocolVersion | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [operationalPlan, setOperationalPlan] = useState<OperationalPlanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<{
     title: string;
@@ -661,14 +664,32 @@ export default function App() {
     });
     try {
       await acceptProtocol(sessionId, activeVersion.id);
-      const builtPlan = buildPlanFromContext({
+      setLoading({
+        title: "Compiling operational plan…",
+        subs: [
+          "Extracting materials from accepted protocol",
+          "Resolving vendors and pricing",
+          "Building schedule and budget",
+        ],
+        intervalMs: 750,
+      });
+      let opPlan: OperationalPlanResponse | null = null;
+      try {
+        opPlan = await createOperationalPlan(sessionId);
+        setOperationalPlan(opPlan);
+      } catch (planError) {
+        // Operational plan compilation can fail (no internet, parser issue);
+        // fall back to the static template so step 5 still renders.
+        console.warn("operational plan failed; using template", planError);
+      }
+      const baseBuilt = buildPlanFromContext({
         question: result?.query || query,
         draftTitle: activeVersion.protocol.title,
         basedOn: selectedProtocol
           ? (result?.papers.find((p) => p.title) ?? null)
           : null,
       });
-      setPlan(builtPlan);
+      setPlan(opPlan ? mergeOperationalPlan(baseBuilt, opPlan) : baseBuilt);
       setAccepted(true);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Approval failed.");
@@ -685,6 +706,7 @@ export default function App() {
     setSessionId(null);
     setAccepted(false);
     setPlan(null);
+    setOperationalPlan(null);
     setPickStage("novelty");
     setError(null);
     setLoading(null);
@@ -763,7 +785,9 @@ export default function App() {
               <ProtocolDraft version={activeVersion} onAccept={handleAccept} isBusy={isBusy} />
             ) : null}
 
-            {accepted && plan ? <FullPlan plan={plan} /> : null}
+            {accepted && plan ? (
+              <FullPlan plan={plan} operationalPlan={operationalPlan} />
+            ) : null}
           </section>
         )}
       </main>
