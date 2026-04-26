@@ -126,7 +126,7 @@ function MaterialsPanel({ plan }: { plan: Plan }) {
       <div className="materials-toolbar">
         <div className="total">
           <strong>{plan.materials.length}</strong>
-          <small>line items · £{fmtNumber(totalReagents)} in reagents</small>
+          <small>line items · {plan.stats.currencySymbol}{fmtNumber(totalReagents)} in reagents</small>
         </div>
         <div className="spacer" />
         <div className="filter-chips">
@@ -174,7 +174,7 @@ function MaterialsPanel({ plan }: { plan: Plan }) {
                   </span>
                 </td>
                 <td style={{ textAlign: "center" }}>{m.qty}</td>
-                <td className="m-cost">£{fmtNumber(m.cost, 0)}</td>
+                <td className="m-cost">{plan.stats.currencySymbol}{fmtNumber(m.cost, 0)}</td>
               </tr>
             ))}
           </tbody>
@@ -355,7 +355,7 @@ function FundingPanel({ plan }: { plan: Plan }) {
   return (
     <div className="funding-panel">
       <div className="fund-intro">
-        <div className="fi-icon">£</div>
+        <div className="fi-icon">$</div>
         <div className="fi-text">
           <strong>Funding routes to verify.</strong> {plan.funding.intro}
         </div>

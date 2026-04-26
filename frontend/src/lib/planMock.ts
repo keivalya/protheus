@@ -141,8 +141,8 @@ const SAMPLE_PLAN: Plan = {
     "Grounded in Can we improve the record efficiency of CdS/CdTe solar cells?.",
   stats: {
     budgetTotal: 12450,
-    currency: "GBP",
-    currencySymbol: "£",
+    currency: "USD",
+    currencySymbol: "$",
     durationWeeks: 10,
     materialsCount: 14,
     phases: 4,
@@ -338,14 +338,14 @@ const SAMPLE_PLAN: Plan = {
       { label: "Contingency (4%)", amount: 500, pct: 4, colorIndex: 5 },
     ],
     metrics: {
-      costPerUnit: "~£520 / device",
-      costPerWeek: "£1,245",
+      costPerUnit: "~$520 / device",
+      costPerWeek: "$1,245",
       leadTime: "8 days",
       reorderRisk: "Low",
     },
     contextNote:
-      "Within the typical envelope for a 10-week perovskite device study at this scale (literature avg: £9k–£18k).",
-    footerLeft: "Quoted prices · GBP · ex VAT",
+      "Within the typical envelope for a 10-week perovskite device study at this scale (literature avg: $9k–$18k).",
+    footerLeft: "Quoted prices · USD · ex VAT",
   },
   timeline: {
     weeks: 10,
@@ -528,7 +528,7 @@ const SAMPLE_PLAN: Plan = {
         type: "gov",
         amountMin: 50000,
         amountMax: 1000000,
-        currencySymbol: "£",
+        currencySymbol: "$",
         deadline: "Check official call page",
         url: "https://www.ukri.org/councils/epsrc/",
         fitScore: 92,
@@ -572,7 +572,7 @@ const SAMPLE_PLAN: Plan = {
         type: "foundation",
         amountMin: 5000,
         amountMax: 25000,
-        currencySymbol: "£",
+        currencySymbol: "$",
         deadline: "Rolling — see scheme page",
         url: "https://royalsociety.org/grants-schemes-awards/grants/",
         fitScore: 64,
@@ -629,7 +629,7 @@ export function fmtNumber(value: number, dp = 0): string {
   return value.toLocaleString("en-GB", { maximumFractionDigits: dp });
 }
 
-export function fmtRange(min: number, max: number, sym = "£"): string {
+export function fmtRange(min: number, max: number, sym = "$"): string {
   if (min == null && max == null) return "—";
   if (min === max) return `${sym}${fmtNumber(min)}`;
   return `${sym}${fmtNumber(min)}–${sym}${fmtNumber(max)}`;
