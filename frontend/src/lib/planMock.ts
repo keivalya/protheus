@@ -854,7 +854,16 @@ export function mergeOperationalPlan(plan: Plan, op: OperationalPlanResponse | n
     materials: realMaterials.length ? realMaterials : plan.materials,
     budget: op.budget_breakdown.length ? realBudget : plan.budget,
     timeline: realTimeline.phases.length
-      ? { ...realTimeline, milestones: plan.timeline.milestones }
+      ? {
+          ...realTimeline,
+          // Only keep mock milestones that fall within the real plan's
+          // week range. Operational plan output does not include
+          // milestones, so anything beyond the schedule's last week
+          // would just be perovskite-specific noise.
+          milestones: plan.timeline.milestones.filter(
+            (m) => m.week <= realTimeline.weeks,
+          ),
+        }
       : plan.timeline,
   };
 }

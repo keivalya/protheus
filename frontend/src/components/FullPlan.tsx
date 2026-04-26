@@ -284,20 +284,22 @@ function TimelinePanel({ plan }: { plan: Plan }) {
           </div>
         ))}
       </div>
-      <div className="milestones">
-        {plan.timeline.milestones.map((m) => (
-          <div className="milestone" key={`${m.week}-${m.title}`}>
-            <div className="ms-week">
-              W{m.week}
-              <small>{m.type}</small>
+      {plan.timeline.milestones.length ? (
+        <div className="milestones">
+          {plan.timeline.milestones.map((m) => (
+            <div className="milestone" key={`${m.week}-${m.title}`}>
+              <div className="ms-week">
+                W{m.week}
+                <small>{m.type}</small>
+              </div>
+              <div className="ms-text">
+                <strong>{m.title}</strong>
+                {m.description}
+              </div>
             </div>
-            <div className="ms-text">
-              <strong>{m.title}</strong>
-              {m.description}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
