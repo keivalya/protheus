@@ -84,7 +84,7 @@ def _evidence_counts(evidence: list) -> dict:
     }
 
 
-def _agent_context_counts(evidence, memories, examples, safety, entities) -> dict:
+def _context_counts(evidence, memories, examples, safety, entities) -> dict:
     context = protocol_agent_context_summary(
         protocol_evidence=evidence,
         prior_memories=memories,
@@ -96,20 +96,20 @@ def _agent_context_counts(evidence, memories, examples, safety, entities) -> dic
         "model": protocol_generation_model(),
         "reasoning_effort": protocol_reasoning_effort(),
         "generation_backend": protocol_generation_backend(),
-        "evidence_agent": context["evidence_agent"],
-        "memory_agent": {
-            "accepted_feedback_memories": context["memory_agent"]["accepted_feedback_memories"],
-            "sections": context["memory_agent"]["sections"],
+        "selected_evidence": context["selected_evidence"],
+        "prior_feedback": {
+            "accepted_feedback_memories": context["prior_feedback"]["accepted_feedback_memories"],
+            "sections": context["prior_feedback"]["sections"],
         },
-        "corpus_agent": {
-            "structure_examples_retrieved": context["corpus_agent"]["structure_examples_retrieved"],
-            "allowed_use": context["corpus_agent"]["allowed_use"],
+        "structure_references": {
+            "structure_examples_retrieved": context["structure_references"]["structure_examples_retrieved"],
+            "allowed_use": context["structure_references"]["allowed_use"],
         },
-        "safety_agent": {
-            "risk_level": context["safety_agent"].get("risk_level"),
-            "requires_expert_review": context["safety_agent"].get("requires_expert_review"),
+        "safety_review": {
+            "risk_level": context["safety_review"].get("risk_level"),
+            "requires_expert_review": context["safety_review"].get("requires_expert_review"),
         },
-        "entity_agent": {"validated_entity_count": len(entities)},
+        "entity_normalization": {"validated_entity_count": len(entities)},
     }
 
 
@@ -148,25 +148,25 @@ async def _prepare_context(session: dict) -> tuple:
         session_id,
         "evidence_extraction",
         "running",
-        "Evidence agent running.",
+        "Extracting selected protocol evidence.",
     )
     _emit_event(
         session_id,
         "corpus_example_retrieval",
         "running",
-        "Corpus agent running.",
+        "Checking structure references.",
     )
     _emit_event(
         session_id,
         "feedback_memory_retrieval",
         "running",
-        "Memory agent running.",
+        "Checking reusable feedback.",
     )
     _emit_event(
         session_id,
         "safety_check",
         "running",
-        "Safety agent running.",
+        "Running safety review.",
     )
 
     with trace_span(
@@ -211,14 +211,14 @@ async def _prepare_context(session: dict) -> tuple:
         session_id,
         "evidence_extraction",
         "completed",
-        "Evidence agent complete.",
+        "Evidence extraction complete.",
         evidence_counts,
     )
     _emit_event(
         session_id,
         "corpus_example_retrieval",
         "completed",
-        "Corpus agent complete.",
+        "Structure references checked.",
         {
             "example_count": len(examples),
             "search_backends": sorted({example.search_backend for example in examples}),
@@ -229,7 +229,7 @@ async def _prepare_context(session: dict) -> tuple:
         session_id,
         "feedback_memory_retrieval",
         "completed",
-        "Memory agent complete.",
+        "Reusable feedback checked.",
         {
             "memory_count": len(memories),
             "sections": sorted({memory.section for memory in memories if memory.section}),
@@ -241,7 +241,7 @@ async def _prepare_context(session: dict) -> tuple:
         session_id,
         "safety_check",
         safety_status,
-        "Safety agent complete.",
+        "Safety review complete.",
         {
             "risk_level": _risk_level(safety),
             "flags": _safety_flags(safety),
@@ -269,9 +269,9 @@ async def generate_initial_protocol_version(session_id: str) -> ProtocolOrchestr
             session_id,
             "protocol_drafting",
             "running",
-            "Composer agent running.",
+            "Composing protocol draft.",
             {
-                **_agent_context_counts(evidence, memories, examples, safety, entities),
+                **_context_counts(evidence, memories, examples, safety, entities),
                 "evidence_count": len(evidence),
                 "prior_memory_count": len(memories),
                 "corpus_example_count": len(examples),
@@ -306,6 +306,8 @@ async def generate_initial_protocol_version(session_id: str) -> ProtocolOrchestr
                 output={
                     "title": protocol.title,
                     "experiment_type": protocol.experiment_type,
+                    "generation_backend": protocol.generation_backend,
+                    "generation_error": protocol.generation_error,
                     "source_evidence_count": len(protocol.source_evidence_used),
                     "reference_examples_used": len(protocol.reference_examples_used),
                 }
@@ -314,11 +316,12 @@ async def generate_initial_protocol_version(session_id: str) -> ProtocolOrchestr
             session_id,
             "protocol_drafting",
             "completed",
-            "Composer agent complete.",
+            "Protocol draft composed.",
             {
-                "model": protocol_generation_model(),
-                "reasoning_effort": protocol_reasoning_effort(),
-                "generation_backend": protocol_generation_backend(),
+                "model": protocol.generation_model or protocol_generation_model(),
+                "reasoning_effort": protocol.reasoning_effort or protocol_reasoning_effort(),
+                "generation_backend": protocol.generation_backend or protocol_generation_backend(),
+                "generation_error": protocol.generation_error,
                 "title": protocol.title,
                 "source_evidence_count": len(protocol.source_evidence_used),
                 "reference_examples_used": len(protocol.reference_examples_used),
@@ -329,7 +332,7 @@ async def generate_initial_protocol_version(session_id: str) -> ProtocolOrchestr
             session_id,
             "protocol_validation",
             "running",
-            "Validation agent running.",
+            "Validating draft.",
         )
         with trace_span(
             "custom_protocol.verifier",
@@ -343,7 +346,7 @@ async def generate_initial_protocol_version(session_id: str) -> ProtocolOrchestr
         with trace_span(
             "custom_protocol.validator",
             input_data={"title": protocol.title},
-            metadata={"stage": "validation_agent"},
+            metadata={"stage": "validation_review"},
             session_id=session_id,
             tags=["custom_protocol", "validator"],
         ) as validator_span:
@@ -383,7 +386,7 @@ async def generate_initial_protocol_version(session_id: str) -> ProtocolOrchestr
             session_id,
             "protocol_validation",
             validation_status,
-            "Validation agent complete.",
+            "Validation review complete.",
             {
                 "overall_status": validation_report.overall_status,
                 "grounding_score": validation_report.grounding_score,
@@ -455,9 +458,9 @@ async def revise_protocol_version(
             session_id,
             "protocol_drafting",
             "running",
-            f"Composer agent running for v{previous_version.version_number + 1}.",
+            f"Composing protocol v{previous_version.version_number + 1}.",
             {
-                **_agent_context_counts(evidence, memories, examples, safety, entities),
+                **_context_counts(evidence, memories, examples, safety, entities),
                 "previous_version_id": previous_version.id,
                 "previous_version_number": previous_version.version_number,
                 "feedback_count": len(feedback),
@@ -497,6 +500,8 @@ async def revise_protocol_version(
                 output={
                     "title": protocol.title,
                     "change_summary": change_summary,
+                    "generation_backend": protocol.generation_backend,
+                    "generation_error": protocol.generation_error,
                     "source_evidence_count": len(protocol.source_evidence_used),
                 }
             )
@@ -504,11 +509,12 @@ async def revise_protocol_version(
             session_id,
             "protocol_drafting",
             "completed",
-            "Composer agent complete.",
+            "Protocol draft composed.",
             {
-                "model": protocol_generation_model(),
-                "reasoning_effort": protocol_reasoning_effort(),
-                "generation_backend": protocol_generation_backend(),
+                "model": protocol.generation_model or protocol_generation_model(),
+                "reasoning_effort": protocol.reasoning_effort or protocol_reasoning_effort(),
+                "generation_backend": protocol.generation_backend or protocol_generation_backend(),
+                "generation_error": protocol.generation_error,
                 "title": protocol.title,
                 "source_evidence_count": len(protocol.source_evidence_used),
                 "feedback_count": len(feedback),
@@ -519,7 +525,7 @@ async def revise_protocol_version(
             session_id,
             "protocol_validation",
             "running",
-            "Validation agent running.",
+            "Validating draft.",
         )
         with trace_span(
             "custom_protocol.revision_verifier",
@@ -533,7 +539,7 @@ async def revise_protocol_version(
         with trace_span(
             "custom_protocol.revision_validator",
             input_data={"title": protocol.title},
-            metadata={"stage": "validation_agent"},
+            metadata={"stage": "validation_review"},
             session_id=session_id,
             tags=["custom_protocol", "validator"],
         ) as validator_span:
@@ -574,7 +580,7 @@ async def revise_protocol_version(
             session_id,
             "protocol_validation",
             validation_status,
-            "Validation agent complete.",
+            "Validation review complete.",
             {
                 "overall_status": validation_report.overall_status,
                 "grounding_score": validation_report.grounding_score,

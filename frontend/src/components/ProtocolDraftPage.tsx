@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import {
   acceptProtocol,
+  createOperationalPlan,
   createProtocolSession,
   fetchProtocolEvents,
   generateProtocolDraft,
@@ -16,9 +17,11 @@ import {
   stopProtocolSession,
   submitProtocolFeedback,
 } from "../api";
+import { OperationalPlanPage } from "./OperationalPlanPage";
 import { ProtocolRunTimeline } from "./ProtocolRunTimeline";
 import type {
   CustomProtocolDraft,
+  OperationalPlanResponse,
   Protocol,
   ProtocolFeedbackType,
   ProtocolSection,
@@ -113,13 +116,53 @@ function buttonClass(kind: "primary" | "secondary" | "danger" = "secondary") {
   return "inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-teal-600 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function listPreview(items: string[], limit = 3): string {
+function listPreview(items: string[], limit = 3, itemMaxLength = 120): string {
   if (!items.length) {
     return "none";
   }
-  const visible = items.slice(0, limit);
+  const visible = items.slice(0, limit).map((item) => conciseText(item, itemMaxLength));
   const remainder = items.length - visible.length;
   return remainder > 0 ? `${visible.join("; ")}; more` : visible.join("; ");
+}
+
+function conciseText(value: string, maxLength = 320): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) {
+    return normalized || "missing information";
+  }
+  const sentenceEnd = normalized.slice(0, maxLength).lastIndexOf(".");
+  const cutoff = sentenceEnd > 120 ? sentenceEnd + 1 : maxLength;
+  return `${normalized.slice(0, cutoff).trim()}...`;
+}
+
+function reviewFocus(section: ProtocolSection): string {
+  const missing = section.missing_information[0];
+  if (missing) {
+    return conciseText(missing, 140);
+  }
+  const assumption = section.assumptions[0];
+  if (assumption) {
+    return conciseText(assumption, 140);
+  }
+  return section.source_ids.length ? "Grounded in selected protocol evidence." : "missing information";
+}
+
+function sectionDecision(section: ProtocolSection): "ready" | "check" {
+  return section.source_ids.length && !section.missing_information.length ? "ready" : "check";
+}
+
+function sectionDecisionClass(section: ProtocolSection): string {
+  return sectionDecision(section) === "ready"
+    ? "border-teal-200 bg-teal-50 text-teal-900"
+    : "border-amber-200 bg-amber-50 text-amber-950";
+}
+
+function sectionDecisionLabel(section: ProtocolSection): string {
+  return sectionDecision(section) === "ready" ? "Ready" : "Check";
+}
+
+function confidenceLabel(value: number): string {
+  return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
 }
 
 function sectionEvidenceLabel(section: ProtocolSection): string {
@@ -149,6 +192,9 @@ export function ProtocolDraftPage({
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [operationalPlan, setOperationalPlan] = useState<OperationalPlanResponse | null>(null);
+  const [operationalPlanError, setOperationalPlanError] = useState<string | null>(null);
+  const [isOperationalPlanLoading, setIsOperationalPlanLoading] = useState(false);
 
   const selectedEvidenceKey = useMemo(
     () =>
@@ -166,6 +212,9 @@ export function ProtocolDraftPage({
     setTimelineEvents([]);
     setError(null);
     setStatus(null);
+    setOperationalPlan(null);
+    setOperationalPlanError(null);
+    setIsOperationalPlanLoading(false);
     setFeedbackDrafts(
       sectionKeys.reduce(
         (drafts, key) => ({ ...drafts, [key]: emptyFeedback() }),
@@ -221,6 +270,7 @@ export function ProtocolDraftPage({
   const canGenerate = selectedProtocols.length > 0;
   const validationReport = activeVersion?.validation_report ?? null;
   const isBlocked = validationReport?.overall_status === "blocked";
+  const isAccepted = activeVersion?.status === "accepted";
   const revisionLimitReached = Boolean(
     activeVersion && activeVersion.version_number >= maxProtocolVersions,
   );
@@ -370,6 +420,40 @@ export function ProtocolDraftPage({
     }
   }, [activeVersion, isBusy, loadTimelineEvents, revisionLimitReached, sessionId]);
 
+  const handleGenerateOperationalPlan = useCallback(
+    async (targetSessionId = sessionId, targetVersionId = activeVersion?.id) => {
+      if (!targetSessionId || !targetVersionId) {
+        return false;
+      }
+      setIsOperationalPlanLoading(true);
+      setOperationalPlanError(null);
+
+      try {
+        const plan = await createOperationalPlan(targetSessionId, {
+          version_id: targetVersionId,
+          team_size: 2,
+          workday_start: "09:00",
+          workday_end: "17:00",
+          skip_weekends: true,
+        });
+        setOperationalPlan(plan);
+        await loadTimelineEvents(targetSessionId);
+        return true;
+      } catch (requestError) {
+        setOperationalPlanError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Operational plan generation failed.",
+        );
+        await loadTimelineEvents(targetSessionId);
+        return false;
+      } finally {
+        setIsOperationalPlanLoading(false);
+      }
+    },
+    [activeVersion?.id, loadTimelineEvents, sessionId],
+  );
+
   const handleAccept = useCallback(async () => {
     if (!sessionId || !activeVersion || isBusy) {
       return;
@@ -383,8 +467,13 @@ export function ProtocolDraftPage({
       const response = await acceptProtocol(sessionId, activeVersion.id);
       await loadTimelineEvents(sessionId);
       setVersions(response.session?.versions ?? versions);
+      setActiveVersionId(response.accepted_version_id);
+      setStatus(`Accepted v${activeVersion.version_number}. Building operational plan.`);
+      const planReady = await handleGenerateOperationalPlan(sessionId, response.accepted_version_id);
       setStatus(
-        `Accepted v${activeVersion.version_number}; saved ${response.memories_saved.length} reusable memory item${response.memories_saved.length === 1 ? "" : "s"}.`,
+        planReady
+          ? `Accepted v${activeVersion.version_number}. Operational plan ready.`
+          : `Accepted v${activeVersion.version_number}. Operational plan needs regeneration.`,
       );
     } catch (requestError) {
       setError(
@@ -396,7 +485,7 @@ export function ProtocolDraftPage({
     } finally {
       setIsBusy(false);
     }
-  }, [activeVersion, isBusy, loadTimelineEvents, sessionId, versions]);
+  }, [activeVersion, handleGenerateOperationalPlan, isBusy, loadTimelineEvents, sessionId, versions]);
 
   const handleStop = useCallback(async () => {
     if (!sessionId || isBusy) {
@@ -445,6 +534,11 @@ export function ProtocolDraftPage({
                 <FlaskConical className="h-4 w-4" aria-hidden="true" />
                 Generate Custom Protocol
               </button>
+            ) : isAccepted ? (
+              <span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-900">
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                Accepted
+              </span>
             ) : (
               <>
                 <button
@@ -536,7 +630,7 @@ export function ProtocolDraftPage({
                   </p>
                 ) : null}
                 <p className="mt-2 text-sm leading-6 text-slate-700">
-                  {activeVersion.protocol.goal}
+                  {conciseText(activeVersion.protocol.goal, 220)}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 md:justify-end">
@@ -548,7 +642,7 @@ export function ProtocolDraftPage({
                 </span>
                 {activeVersion.protocol.prior_feedback_used.length ? (
                   <span className="w-fit rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                    prior feedback applied
+                    reusable feedback applied
                   </span>
                 ) : null}
                 {validationReport ? (
@@ -615,7 +709,7 @@ export function ProtocolDraftPage({
                         <p className="font-semibold">
                           {issue.section.replace(/_/g, " ")} · {issue.severity}
                         </p>
-                        <p className="mt-1">{issue.issue}</p>
+                        <p className="mt-1">{conciseText(issue.issue, 140)}</p>
                       </div>
                     ))}
                   </div>
@@ -625,7 +719,7 @@ export function ProtocolDraftPage({
 
                 {validationReport.missing_information.length ? (
                   <div className="mt-3 text-sm">
-                    <p className="font-semibold">Missing information</p>
+                    <p className="font-semibold">Needs researcher confirmation</p>
                     <p className="mt-1">{listPreview(validationReport.missing_information, 4)}</p>
                   </div>
                 ) : null}
@@ -646,7 +740,21 @@ export function ProtocolDraftPage({
             </div>
           ) : null}
 
-          {!isBlocked ? sectionKeys.map((sectionKey) => {
+          {activeVersion.status === "accepted" ||
+          operationalPlan ||
+          isOperationalPlanLoading ||
+          operationalPlanError ? (
+            <OperationalPlanPage
+              plan={operationalPlan}
+              isLoading={isOperationalPlanLoading}
+              error={operationalPlanError}
+              onGenerate={() => {
+                void handleGenerateOperationalPlan();
+              }}
+            />
+          ) : null}
+
+          {!isAccepted && !isBlocked ? sectionKeys.map((sectionKey) => {
             const section = getSection(activeVersion.protocol, sectionKey);
             const draft = feedbackDrafts[sectionKey] ?? emptyFeedback();
             const reviewNotes = sectionReviewNotes(section);
@@ -655,57 +763,90 @@ export function ProtocolDraftPage({
                 key={`${activeVersion.id}-${sectionKey}`}
                 className="rounded-lg border border-slate-200 bg-white p-5 shadow-soft"
               >
-                <div>
-                  <h4 className="text-base font-semibold text-slate-950">{section.title}</h4>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
-                    {section.content}
-                  </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h4 className="text-base font-semibold text-slate-950">{section.title}</h4>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {reviewFocus(section)}
+                    </p>
+                  </div>
+                  <span
+                    className={`w-fit rounded-md border px-2.5 py-1 text-xs font-semibold ${sectionDecisionClass(section)}`}
+                  >
+                    {sectionDecisionLabel(section)}
+                  </span>
                 </div>
 
-                <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                <div className="mt-4 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 sm:grid-cols-3">
                   <p>
-                    <span className="font-semibold text-slate-900">Evidence: </span>
+                    <span className="font-semibold text-slate-900">Evidence</span>
+                    <br />
                     {sectionEvidenceLabel(section)}
                   </p>
-                  {reviewNotes.length ? (
-                    <p className="mt-1">
-                      <span className="font-semibold text-slate-900">Needs review: </span>
-                      {listPreview(reviewNotes)}
-                    </p>
-                  ) : null}
+                  <p>
+                    <span className="font-semibold text-slate-900">Confidence</span>
+                    <br />
+                    {confidenceLabel(section.confidence)}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-slate-900">Review</span>
+                    <br />
+                    {reviewNotes.length ? `${reviewNotes.length} item${reviewNotes.length === 1 ? "" : "s"}` : "none"}
+                  </p>
                 </div>
 
                 {section.items.length ? (
-                  <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm font-semibold text-slate-950">Materials</p>
+                  <details className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-950">
+                      Materials mentioned ({section.items.length})
+                    </summary>
                     <div className="mt-2 grid gap-1 text-sm text-slate-700">
-                      {section.items.map((item) => (
+                      {section.items.slice(0, 8).map((item) => (
                         <p key={`${sectionKey}-${item.name}`}>{item.name}</p>
                       ))}
+                      {section.items.length > 8 ? <p>more</p> : null}
                     </div>
-                  </div>
+                  </details>
                 ) : null}
 
                 {section.phases.length ? (
-                  <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm font-semibold text-slate-950">Workflow outline</p>
+                  <details className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-950">
+                      Workflow outline ({section.phases.length})
+                    </summary>
                     <div className="mt-2 grid gap-3 text-sm text-slate-700">
                       {section.phases.map((phase) => (
                         <div key={`${sectionKey}-${phase.phase_name}`}>
                           <p className="font-semibold text-slate-900">{phase.phase_name}</p>
-                          <p>{phase.purpose}</p>
+                          <p>{conciseText(phase.purpose, 180)}</p>
                           <div className="mt-1 grid gap-1">
-                            {phase.steps.map((step) => (
+                            {phase.steps.slice(0, 4).map((step) => (
                               <p key={`${phase.phase_name}-${step.step_number}`}>
-                                {step.step_number}. {step.action}
+                                {step.step_number}. {conciseText(step.action, 180)}
                               </p>
                             ))}
+                            {phase.steps.length > 4 ? <p>more</p> : null}
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </details>
                 ) : null}
+
+                <details className="mt-4 rounded-md border border-slate-200 bg-white p-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+                    View generated section
+                  </summary>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
+                    {section.content}
+                  </p>
+                  {reviewNotes.length ? (
+                    <div className="mt-3 text-sm text-slate-700">
+                      <p className="font-semibold text-slate-900">Researcher review items</p>
+                      <p className="mt-1">{listPreview(reviewNotes, 5)}</p>
+                    </div>
+                  ) : null}
+                </details>
 
                 <div className="mt-4 flex flex-col gap-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -752,6 +893,7 @@ export function ProtocolDraftPage({
             );
           }) : null}
 
+          {!isAccepted ? (
           <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
             <h4 className="text-base font-semibold text-slate-950">Open questions</h4>
             <div className="mt-3 grid gap-2 text-sm leading-6 text-slate-700">
@@ -767,6 +909,7 @@ export function ProtocolDraftPage({
               {activeVersion.protocol.disclaimer}
             </p>
           </div>
+          ) : null}
         </div>
       ) : null}
     </section>

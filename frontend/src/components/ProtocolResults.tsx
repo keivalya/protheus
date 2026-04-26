@@ -72,7 +72,6 @@ export function ProtocolResults({ protocols, selectedIds, onToggle }: ProtocolRe
                       ) : null}
                     </div>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-700">{protocol.match_reason}</p>
                 </div>
               </div>
             </article>

@@ -29,26 +29,28 @@ SECTION_KEYS = [
     "risks_and_limitations",
 ]
 
-DEFAULT_PROTOCOL_MODEL = "gpt-5.2"
+DEFAULT_PROTOCOL_MODEL = "gpt-5.1"
 DEFAULT_PROTOCOL_REASONING_EFFORT = "medium"
-PROTOCOL_AGENT_ROLES = {
-    "evidence_agent": (
+DEFAULT_PROTOCOL_MAX_COMPLETION_TOKENS = 12000
+PROTOCOL_CONTEXT_ROLES = {
+    "evidence_extraction_agent": (
         "Extracts protocol steps, materials, equipment, conditions, warnings, validation methods, "
         "and missing fields from the selected protocols."
     ),
-    "memory_agent": (
-        "Retrieves accepted prior researcher corrections relevant to the current hypothesis."
+    "prior_feedback_index": (
+        "Retrieves accepted prior researcher corrections relevant to the current hypothesis. "
+        "This is retrieval context, not a protocol-generating agent."
     ),
-    "corpus_agent": (
+    "structure_reference_retriever": (
         "Retrieves similar local corpus examples for structure only. It cannot override selected protocols."
     ),
-    "safety_agent": (
+    "safety_review_agent": (
         "Classifies risk and can force expert review or redact operational details."
     ),
-    "entity_agent": (
+    "entity_normalizer": (
         "Normalizes scientific entities from the structured hypothesis."
     ),
-    "protocol_composer": (
+    "protocol_composer_agent": (
         "Writes the structured researcher-review draft from the agent context bundle."
     ),
 }
@@ -118,6 +120,16 @@ def protocol_reasoning_effort() -> str:
     return os.getenv("OPENAI_PROTOCOL_REASONING_EFFORT") or DEFAULT_PROTOCOL_REASONING_EFFORT
 
 
+def protocol_max_completion_tokens() -> int:
+    raw_value = os.getenv("OPENAI_PROTOCOL_MAX_COMPLETION_TOKENS")
+    if not raw_value:
+        return DEFAULT_PROTOCOL_MAX_COMPLETION_TOKENS
+    try:
+        return max(4000, int(raw_value))
+    except ValueError:
+        return DEFAULT_PROTOCOL_MAX_COMPLETION_TOKENS
+
+
 def protocol_generation_backend() -> str:
     if not os.getenv("OPENAI_API_KEY"):
         return "local_fallback_no_openai_key"
@@ -143,8 +155,8 @@ def protocol_agent_context_summary(
         }
     )
     return {
-        "agent_roles": PROTOCOL_AGENT_ROLES,
-        "evidence_agent": {
+        "context_roles": PROTOCOL_CONTEXT_ROLES,
+        "selected_evidence": {
             "selected_protocols_processed": len(protocol_evidence),
             "steps_extracted": sum(len(item.steps) for item in protocol_evidence),
             "materials_extracted": sum(len(item.materials) for item in protocol_evidence),
@@ -152,12 +164,12 @@ def protocol_agent_context_summary(
             "missing_fields": missing_fields,
             "protocol_source_ids": [item.source_id for item in protocol_evidence],
         },
-        "memory_agent": {
+        "prior_feedback": {
             "accepted_feedback_memories": len(prior_memories),
             "sections": sorted({memory.section for memory in prior_memories if memory.section}),
             "memory_text": [memory.memory_text for memory in prior_memories[:5]],
         },
-        "corpus_agent": {
+        "structure_references": {
             "structure_examples_retrieved": len(reference_examples),
             "allowed_use": "structure guidance only",
             "structure_notes": [
@@ -169,8 +181,8 @@ def protocol_agent_context_summary(
                 for example in reference_examples[:5]
             ],
         },
-        "safety_agent": safety_review.model_dump(),
-        "entity_agent": [item.model_dump() for item in validated_entities],
+        "safety_review": safety_review.model_dump(),
+        "entity_normalization": [item.model_dump() for item in validated_entities],
         "source_hierarchy": [
             "selected_protocols_primary",
             "lab_context_constraints_if_present",
@@ -358,6 +370,7 @@ def _fallback_protocol_draft(
     protocol_evidence: list[ExtractedProtocolEvidence] | None = None,
     safety_review: SafetyReview | None = None,
     validated_entities: list[EntityValidation] | None = None,
+    generation_error: str | None = None,
 ) -> CustomProtocolDraft:
     hypothesis = session.get("structured_hypothesis") or {}
     evidence_pack = build_evidence_pack(session)
@@ -382,6 +395,7 @@ def _fallback_protocol_draft(
     ] or _workflow_lines(protocols)
     safety_review = safety_review or SafetyReview()
     validated_entities = validated_entities or []
+    generation_backend = "local_fallback_openai_error" if generation_error else protocol_generation_backend()
 
     model_system = hypothesis.get("model_system")
     intervention = hypothesis.get("intervention")
@@ -419,18 +433,6 @@ def _fallback_protocol_draft(
     if memory_notes:
         workflow_content = workflow_content + " Prior researcher feedback to consider: " + " ".join(memory_notes)
         validation_content = validation_content + " Prior researcher feedback to consider: " + " ".join(memory_notes)
-
-    example_notes = [
-        f"{example.source}: {example.summary}"
-        for example in reference_examples[:3]
-        if example.summary
-    ]
-    if example_notes:
-        workflow_content = (
-            workflow_content
-            + " Retrieved protocol-structure examples to consider: "
-            + " ".join(example_notes)
-        )
 
     missing_common = []
     if not source_ids:
@@ -511,6 +513,10 @@ def _fallback_protocol_draft(
         reference_examples_used=reference_examples,
         validated_entities=validated_entities,
         extracted_protocol_evidence=protocol_evidence,
+        generation_backend=generation_backend,
+        generation_model=protocol_generation_model(),
+        reasoning_effort=protocol_reasoning_effort(),
+        generation_error=generation_error,
     )
 
 
@@ -544,15 +550,16 @@ def _generation_prompt(
         {
             "role": "system",
             "content": (
-                "You are the protocol_composer in an agentic scientific planning system. "
-                "Parallel specialist agents have already prepared evidence, memory, corpus, safety, and entity context. "
+                "You are the protocol_composer_agent in an agentic scientific planning system. "
+                "Parallel specialist modules have already prepared selected-evidence extraction, prior feedback retrieval, "
+                "structure references, safety review, and entity normalization context. "
                 "You generate structured protocol drafts for qualified researcher review. "
                 "Return only valid data for the provided Pydantic schema. "
                 "Selected protocols are the primary grounding source for materials, workflow, controls, and validation. "
                 "Corpus examples are structure guidance only and must never override selected protocols. "
                 "Prior feedback memory may shape how similar sections are framed, but it is not primary evidence. "
                 "Papers, if present, are background/rationale only unless they clearly contain method detail. "
-                "Safety agent output overrides every other source. "
+                "Safety review output overrides every other source. "
                 "If information is missing, write 'missing information'. "
                 "Do not invent unsupported parameters or executable lab details. Keep the draft high-level and non-executable."
             ),
@@ -563,7 +570,7 @@ def _generation_prompt(
                 f"{task}\n\n"
                 f"Original query:\n{session.get('original_query')}\n\n"
                 f"Structured hypothesis:\n{session.get('structured_hypothesis')}\n\n"
-                "Agent context bundle:\n"
+                "Context bundle:\n"
                 f"{json.dumps(agent_context, ensure_ascii=False, indent=2)}\n\n"
                 f"Selected protocol evidence pack:\n{[item.model_dump() for item in protocol_evidence]}\n\n"
                 f"Optional selected paper/background evidence:\n{[item for item in evidence_pack['items'] if item.get('kind') == 'paper']}\n\n"
@@ -573,6 +580,7 @@ def _generation_prompt(
                 "Composer requirements:\n"
                 "- Use selected protocol source_ids for every major protocol-building section when supported.\n"
                 "- Mark missing details as missing information instead of filling them in.\n"
+                "- Use corpus examples only for internal structure guidance; do not quote, name, or summarize them in user-visible protocol sections.\n"
                 "- Keep corpus examples out of source_ids unless they are explicitly represented as structure notes.\n"
                 "- If safety risk is blocked_or_redacted, do not provide operational workflow detail.\n"
                 "- Preserve prior_feedback_used, reference_examples_used, validated_entities, and extracted_protocol_evidence in the schema output.\n\n"
@@ -591,37 +599,57 @@ def _try_instructor_draft(
     validated_entities: list[EntityValidation] | None = None,
     previous_version: ProtocolVersionResponse | None = None,
     feedback: list[ProtocolFeedbackResponse] | None = None,
-) -> CustomProtocolDraft | None:
+) -> tuple[CustomProtocolDraft | None, str | None]:
     if not os.getenv("OPENAI_API_KEY"):
-        return None
+        return None, "OPENAI_API_KEY is not configured."
     try:
         import instructor
-    except Exception:
-        return None
+    except Exception as exc:
+        return None, f"Instructor import failed: {type(exc).__name__}: {exc}"
 
     model = protocol_generation_model()
     reasoning_effort = protocol_reasoning_effort()
+    max_completion_tokens = protocol_max_completion_tokens()
     try:
-        client = instructor.from_provider(f"openai/{model}")
-        draft = client.create(
-            response_model=CustomProtocolDraft,
-            messages=_generation_prompt(
-                session,
-                prior_memories,
-                reference_examples,
-                protocol_evidence,
-                safety_review,
-                validated_entities,
-                previous_version,
-                feedback,
-            ),
-            max_retries=2,
-            max_completion_tokens=3500,
-            reasoning_effort=reasoning_effort,
+        messages = _generation_prompt(
+            session,
+            prior_memories,
+            reference_examples,
+            protocol_evidence,
+            safety_review,
+            validated_entities,
+            previous_version,
+            feedback,
         )
-    except Exception:
-        return None
-    return draft
+        if hasattr(instructor, "from_provider"):
+            client = instructor.from_provider(f"openai/{model}")
+            draft = client.create(
+                response_model=CustomProtocolDraft,
+                messages=messages,
+                max_retries=2,
+                max_completion_tokens=max_completion_tokens,
+                reasoning_effort=reasoning_effort,
+            )
+        else:
+            from openai import OpenAI
+
+            client = instructor.from_openai(OpenAI())
+            draft = client.chat.completions.create(
+                model=model,
+                response_model=CustomProtocolDraft,
+                messages=messages,
+                max_retries=2,
+                max_completion_tokens=max_completion_tokens,
+                reasoning_effort=reasoning_effort,
+            )
+    except Exception as exc:
+        message = f"OpenAI Instructor generation failed: {type(exc).__name__}: {exc}"
+        return None, message[:500]
+    draft.generation_backend = "openai_instructor"
+    draft.generation_model = model
+    draft.reasoning_effort = reasoning_effort
+    draft.generation_error = None
+    return draft, None
 
 
 def generate_protocol_draft(
@@ -632,7 +660,7 @@ def generate_protocol_draft(
     safety_review: SafetyReview | None = None,
     validated_entities: list[EntityValidation] | None = None,
 ) -> CustomProtocolDraft:
-    instructor_draft = _try_instructor_draft(
+    instructor_draft, generation_error = _try_instructor_draft(
         session,
         prior_memories,
         reference_examples,
@@ -646,6 +674,10 @@ def generate_protocol_draft(
         instructor_draft.safety_review = safety_review or instructor_draft.safety_review
         instructor_draft.validated_entities = validated_entities or instructor_draft.validated_entities
         instructor_draft.extracted_protocol_evidence = protocol_evidence or instructor_draft.extracted_protocol_evidence
+        instructor_draft.generation_backend = "openai_instructor"
+        instructor_draft.generation_model = protocol_generation_model()
+        instructor_draft.reasoning_effort = protocol_reasoning_effort()
+        instructor_draft.generation_error = None
         return instructor_draft
     return _fallback_protocol_draft(
         session,
@@ -654,6 +686,7 @@ def generate_protocol_draft(
         protocol_evidence,
         safety_review,
         validated_entities,
+        generation_error,
     )
 
 
@@ -694,6 +727,7 @@ def _fallback_revised_protocol(
     protocol_evidence: list[ExtractedProtocolEvidence] | None = None,
     safety_review: SafetyReview | None = None,
     validated_entities: list[EntityValidation] | None = None,
+    generation_error: str | None = None,
 ) -> tuple[CustomProtocolDraft, str]:
     draft = previous_version.protocol.model_copy(deep=True)
     by_section: dict[str, list[ProtocolFeedbackResponse]] = {}
@@ -706,6 +740,10 @@ def _fallback_revised_protocol(
         "safety_review": safety_review or draft.safety_review,
         "validated_entities": validated_entities or draft.validated_entities,
         "extracted_protocol_evidence": protocol_evidence or draft.extracted_protocol_evidence,
+        "generation_backend": "local_fallback_openai_error" if generation_error else protocol_generation_backend(),
+        "generation_model": protocol_generation_model(),
+        "reasoning_effort": protocol_reasoning_effort(),
+        "generation_error": generation_error,
     }
     changed_sections: list[str] = []
     for key in SECTION_KEYS:
@@ -738,7 +776,7 @@ def _fallback_revised_protocol(
         )
         updates["risks_and_limitations"] = risk_section.model_copy(
             update={
-                "content": f"{risk_section.content}\n\nValidation agent findings to address: {issue_text}",
+                "content": f"{risk_section.content}\n\nValidation review findings to address: {issue_text}",
                 "missing_information": list(
                     dict.fromkeys(
                         [
@@ -771,7 +809,7 @@ def revise_protocol_draft(
     safety_review: SafetyReview | None = None,
     validated_entities: list[EntityValidation] | None = None,
 ) -> tuple[CustomProtocolDraft, str]:
-    instructor_draft = _try_instructor_draft(
+    instructor_draft, generation_error = _try_instructor_draft(
         session,
         prior_memories,
         reference_examples,
@@ -787,6 +825,10 @@ def revise_protocol_draft(
         instructor_draft.safety_review = safety_review or instructor_draft.safety_review
         instructor_draft.validated_entities = validated_entities or instructor_draft.validated_entities
         instructor_draft.extracted_protocol_evidence = protocol_evidence or instructor_draft.extracted_protocol_evidence
+        instructor_draft.generation_backend = "openai_instructor"
+        instructor_draft.generation_model = protocol_generation_model()
+        instructor_draft.reasoning_effort = protocol_reasoning_effort()
+        instructor_draft.generation_error = None
         return instructor_draft, "Revised protocol using researcher feedback and relevant feedback memory."
     return _fallback_revised_protocol(
         session,
@@ -797,4 +839,5 @@ def revise_protocol_draft(
         protocol_evidence,
         safety_review,
         validated_entities,
+        generation_error,
     )

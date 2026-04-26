@@ -14,6 +14,8 @@ from app.services.protocol_db import (
     create_feedback_memories_for_session,
     create_protocol_feedback,
     create_protocol_session,
+    emit_transparency_event,
+    get_operational_plan,
     get_latest_protocol_version,
     list_transparency_events,
     get_protocol_session_detail,
@@ -21,9 +23,12 @@ from app.services.protocol_db import (
     get_protocol_version,
     init_protocol_tables,
     mark_protocol_session_accepted,
+    save_operational_plan,
     stop_protocol_session,
 )
+from app.services.operational_plan import compile_operational_plan
 from app.services.protocol_models import (
+    OperationalPlanRequest,
     ProtocolAcceptRequest,
     ProtocolFeedbackCreate,
     ProtocolReviseRequest,
@@ -242,6 +247,80 @@ def accept_protocol_endpoint(session_id: str, payload: ProtocolAcceptRequest | N
         "memories_saved": [memory.model_dump() for memory in memories],
         "memories_indexed": indexed_count,
     }
+
+
+@app.post("/api/protocol-sessions/{session_id}/operational-plan")
+def create_operational_plan_endpoint(
+    session_id: str,
+    payload: OperationalPlanRequest | None = None,
+) -> dict:
+    session = get_protocol_session_record(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Protocol session not found.")
+    if session.get("status") != "accepted" or not session.get("accepted_version_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="Accept the custom protocol before generating an operational plan.",
+        )
+
+    request_payload = payload or OperationalPlanRequest()
+    requested_version_id = request_payload.version_id or session["accepted_version_id"]
+    if requested_version_id != session["accepted_version_id"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Operational plans can only be generated from the accepted protocol version.",
+        )
+
+    version = get_protocol_version(requested_version_id)
+    if not version or version.session_id != session_id:
+        raise HTTPException(status_code=404, detail="Accepted protocol version not found.")
+
+    emit_transparency_event(
+        session_id=session_id,
+        version_id=version.id,
+        stage="operational_planning",
+        status="running",
+        user_message="Operational planning running.",
+        details={
+            "accepted_version_id": version.id,
+            "team_size": request_payload.team_size,
+            "supplier_lookup": "public_price_lookup_limited",
+        },
+    )
+    plan = compile_operational_plan(
+        session,
+        version,
+        request_payload.model_dump(mode="json"),
+    )
+    saved_plan = save_operational_plan(session_id, version.id, plan)
+    emit_transparency_event(
+        session_id=session_id,
+        version_id=version.id,
+        stage="operational_planning",
+        status="completed",
+        user_message="Operational plan ready.",
+        details={
+            "supply_chain_items": len(saved_plan.get("supply_chain_items") or []),
+            "timeline_tasks": len(saved_plan.get("timeline") or []),
+            "priced_items": (saved_plan.get("budget_summary") or {}).get("priced_items"),
+            "total_items": (saved_plan.get("budget_summary") or {}).get("total_items"),
+        },
+    )
+    return saved_plan
+
+
+@app.get("/api/protocol-sessions/{session_id}/operational-plan")
+def get_operational_plan_endpoint(session_id: str) -> dict:
+    session = get_protocol_session_record(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Protocol session not found.")
+    plan = get_operational_plan(session_id)
+    if not plan:
+        raise HTTPException(
+            status_code=404,
+            detail="Operational plan not found. Generate it after accepting the protocol.",
+        )
+    return plan
 
 
 @app.post("/api/protocol-sessions/{session_id}/stop")

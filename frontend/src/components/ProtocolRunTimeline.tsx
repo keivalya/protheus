@@ -10,42 +10,42 @@ import type { TransparencyEvent, TransparencyEventStatus } from "../types";
 const stages = [
   {
     key: "reading_selected_protocols",
-    label: "Reading selected protocols",
+    label: "Selected evidence",
     message: "Reading selected protocols.",
   },
   {
     key: "evidence_extraction",
-    label: "Evidence agent",
+    label: "Evidence extraction",
     message: "Extracting selected protocol evidence.",
   },
   {
     key: "corpus_example_retrieval",
-    label: "Corpus agent",
+    label: "Structure references",
     message: "Checking local protocol patterns.",
   },
   {
     key: "feedback_memory_retrieval",
-    label: "Memory agent",
-    message: "Checking accepted feedback memory.",
+    label: "Prior feedback",
+    message: "Checking reusable feedback.",
   },
   {
     key: "safety_check",
-    label: "Safety agent",
+    label: "Safety review",
     message: "Running safety checks.",
   },
   {
     key: "protocol_drafting",
-    label: "Composer agent",
+    label: "Protocol composer",
     message: "Drafting protocol.",
   },
   {
     key: "protocol_validation",
-    label: "Validation agent",
+    label: "Validation review",
     message: "Validating draft.",
   },
   {
     key: "ready_for_review",
-    label: "Preparing review",
+    label: "Researcher review",
     message: "Ready for review.",
   },
 ];
@@ -87,12 +87,14 @@ function StatusIcon({ status }: { status: TransparencyEventStatus }) {
 }
 
 export function ProtocolRunTimeline({ events, isRunning }: ProtocolRunTimelineProps) {
-  const latest = latestEventsByStage(events);
-  const activeEvent = [...events].reverse().find((event) => event.status === "running");
-  const latestEvent = events[events.length - 1];
+  const stageKeys = new Set(stages.map((stage) => stage.key));
+  const protocolEvents = events.filter((event) => stageKeys.has(event.stage));
+  const latest = latestEventsByStage(protocolEvents);
+  const activeEvent = [...protocolEvents].reverse().find((event) => event.status === "running");
+  const latestEvent = protocolEvents[protocolEvents.length - 1];
   const activeStage = stages.find((stage) => stage.key === activeEvent?.stage);
   const latestStage = stages.find((stage) => stage.key === latestEvent?.stage);
-  const show = isRunning || events.length > 0;
+  const show = isRunning || protocolEvents.length > 0;
 
   if (!show) {
     return null;

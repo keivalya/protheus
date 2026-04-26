@@ -126,6 +126,17 @@ def init_protocol_tables() -> None:
               FOREIGN KEY(session_id) REFERENCES protocol_sessions(id),
               FOREIGN KEY(version_id) REFERENCES protocol_versions(id)
             );
+
+            CREATE TABLE IF NOT EXISTS operational_plans (
+              id TEXT PRIMARY KEY,
+              session_id TEXT NOT NULL UNIQUE,
+              version_id TEXT NOT NULL,
+              plan_json TEXT NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY(session_id) REFERENCES protocol_sessions(id),
+              FOREIGN KEY(version_id) REFERENCES protocol_versions(id)
+            );
             """
         )
         version_columns = {
@@ -459,6 +470,36 @@ def list_transparency_events(session_id: str) -> list[TransparencyEventResponse]
             (session_id,),
         ).fetchall()
     return [_transparency_event_from_row(row) for row in rows]
+
+
+def save_operational_plan(session_id: str, version_id: str, plan: dict[str, Any]) -> dict[str, Any]:
+    plan_id = str(uuid.uuid4())
+    with _connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO operational_plans (id, session_id, version_id, plan_json)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET
+              version_id = excluded.version_id,
+              plan_json = excluded.plan_json,
+              updated_at = CURRENT_TIMESTAMP
+            """,
+            (plan_id, session_id, version_id, _json_dumps(plan)),
+        )
+        row = connection.execute(
+            "SELECT plan_json FROM operational_plans WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+    return _json_loads(row["plan_json"], plan) if row else plan
+
+
+def get_operational_plan(session_id: str) -> dict[str, Any] | None:
+    with _connect() as connection:
+        row = connection.execute(
+            "SELECT plan_json FROM operational_plans WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+    return _json_loads(row["plan_json"], None) if row else None
 
 
 def mark_protocol_session_accepted(session_id: str, version_id: str) -> None:

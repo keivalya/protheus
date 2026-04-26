@@ -1,6 +1,8 @@
 import type {
   LabContext,
   LiteratureQCResponse,
+  OperationalPlanRequest,
+  OperationalPlanResponse,
   Paper,
   Protocol,
   ProtocolAcceptResponse,
@@ -142,4 +144,25 @@ export async function stopProtocolSession(sessionId: string): Promise<{ session:
   });
 
   return parseJsonResponse<{ session: ProtocolSessionDetail | null }>(response);
+}
+
+export async function createOperationalPlan(
+  sessionId: string,
+  payload: OperationalPlanRequest = {},
+): Promise<OperationalPlanResponse> {
+  const response = await fetch(`${API_BASE}/api/protocol-sessions/${sessionId}/operational-plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return parseJsonResponse<OperationalPlanResponse>(response);
+}
+
+export async function fetchOperationalPlan(sessionId: string): Promise<OperationalPlanResponse> {
+  const response = await fetch(`${API_BASE}/api/protocol-sessions/${sessionId}/operational-plan`);
+
+  return parseJsonResponse<OperationalPlanResponse>(response);
 }

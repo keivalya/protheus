@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class LabContext(BaseModel):
@@ -55,6 +56,62 @@ class ProtocolSection(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     items: list[MaterialItem] = Field(default_factory=list)
     phases: list[WorkflowPhase] = Field(default_factory=list)
+
+    @field_validator("phases", mode="before")
+    @classmethod
+    def normalize_phases(cls, value: Any) -> list[Any]:
+        if not isinstance(value, list):
+            return []
+
+        normalized: list[dict[str, Any]] = []
+        for phase_index, phase in enumerate(value, start=1):
+            if not isinstance(phase, dict):
+                continue
+            phase_name = phase.get("phase_name") or phase.get("title") or phase.get("name")
+            raw_steps = phase.get("steps") or []
+            if isinstance(raw_steps, str):
+                raw_steps = [raw_steps]
+
+            steps: list[dict[str, Any]] = []
+            for step_index, step in enumerate(raw_steps, start=1):
+                if isinstance(step, str):
+                    step = {"action": step}
+                if not isinstance(step, dict):
+                    continue
+                action = (
+                    step.get("action")
+                    or step.get("step_description")
+                    or step.get("description")
+                    or step.get("text")
+                )
+                if not action:
+                    continue
+                parameters = step.get("parameters") if isinstance(step.get("parameters"), dict) else {}
+                steps.append(
+                    {
+                        "step_number": step.get("step_number") or step.get("number") or step_index,
+                        "action": str(action),
+                        "parameters": parameters,
+                        "source_ids": step.get("source_ids") if isinstance(step.get("source_ids"), list) else [],
+                        "assumptions": step.get("assumptions") if isinstance(step.get("assumptions"), list) else [],
+                        "missing_information": (
+                            step.get("missing_information")
+                            if isinstance(step.get("missing_information"), list)
+                            else []
+                        ),
+                    }
+                )
+
+            if phase_name and steps:
+                normalized.append(
+                    {
+                        "phase_name": str(phase_name),
+                        "purpose": str(phase.get("purpose") or phase.get("description") or "Researcher review phase"),
+                        "steps": steps,
+                        "source_ids": phase.get("source_ids") if isinstance(phase.get("source_ids"), list) else [],
+                    }
+                )
+        return normalized
 
 
 class SafetyReview(BaseModel):
@@ -155,6 +212,10 @@ class CustomProtocolDraft(BaseModel):
     reference_examples_used: list[CorpusExampleReference] = Field(default_factory=list)
     validated_entities: list[EntityValidation] = Field(default_factory=list)
     extracted_protocol_evidence: list[ExtractedProtocolEvidence] = Field(default_factory=list)
+    generation_backend: str | None = None
+    generation_model: str | None = None
+    reasoning_effort: str | None = None
+    generation_error: str | None = None
 
 
 FeedbackType = Literal["accept", "correction", "comment", "rejection"]
@@ -186,6 +247,28 @@ class ProtocolReviseRequest(BaseModel):
 
 class ProtocolAcceptRequest(BaseModel):
     version_id: str | None = None
+
+
+class OperationalPlanRequest(BaseModel):
+    version_id: str | None = None
+    team_size: int = Field(default=2, ge=1, le=20)
+    start_date: date | None = None
+    workday_start: str = Field(default="09:00", pattern=r"^\d{2}:\d{2}$")
+    workday_end: str = Field(default="17:00", pattern=r"^\d{2}:\d{2}$")
+    hours_per_day: float = Field(default=8, gt=0, le=16)
+    workdays: list[str] = Field(
+        default_factory=lambda: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    )
+    skip_weekends: bool = True
+    include_us_holidays: bool = False
+    procurement_lead_days: int | None = Field(default=None, ge=0, le=90)
+
+    @field_validator("workdays", mode="before")
+    @classmethod
+    def normalize_workdays(cls, value: Any) -> list[str]:
+        if not isinstance(value, list) or not value:
+            return ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        return [str(item) for item in value if str(item).strip()]
 
 
 class ProtocolVersionResponse(BaseModel):
