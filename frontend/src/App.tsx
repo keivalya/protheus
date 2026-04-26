@@ -8,6 +8,8 @@ import {
 import type {
   CustomProtocolDraft,
   LiteratureQCResponse,
+  NoveltySignal,
+  Paper,
   Protocol,
   ProtocolSection,
   ProtocolVersion,
@@ -45,6 +47,16 @@ const sectionKeys: Array<keyof CustomProtocolDraft> = [
   "risks_and_limitations",
 ];
 
+const STEP_LABELS = [
+  "Question",
+  "Literature QC",
+  "Pick protocol",
+  "Review & iterate",
+  "Full plan",
+];
+
+type PickStage = "novelty" | "protocols";
+
 function renderMarked(text: string, mark?: string) {
   if (!mark) return text;
   const idx = text.toLowerCase().lastIndexOf(mark.toLowerCase());
@@ -58,6 +70,11 @@ function renderMarked(text: string, mark?: string) {
   );
 }
 
+function SciTitle({ html }: { html: string }) {
+  const safe = html.replace(/<(?!\/?(?:sub|sup)\b)[^>]*>/gi, "");
+  return <span dangerouslySetInnerHTML={{ __html: safe }} />;
+}
+
 function shortText(value = "", max = 140) {
   const clean = value.replace(/\s+/g, " ").trim();
   return clean.length > max ? `${clean.slice(0, max - 1).trim()}…` : clean;
@@ -66,6 +83,60 @@ function shortText(value = "", max = 140) {
 function scoreLabel(score?: number) {
   if (typeof score !== "number") return "match";
   return `${Math.round(score)}%`;
+}
+
+function shortDoi(doi?: string | null) {
+  if (!doi) return null;
+  return doi.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, "");
+}
+
+function noveltyPillText(signal: NoveltySignal) {
+  switch (signal) {
+    case "exact match found":
+    case "similar work exists":
+      return "Similar work exists";
+    case "not found":
+      return "Novel direction";
+    default:
+      return signal;
+  }
+}
+
+function noveltyPillTone(signal: NoveltySignal) {
+  switch (signal) {
+    case "exact match found":
+      return "warn";
+    case "similar work exists":
+      return "warn";
+    case "not found":
+      return "ok";
+    default:
+      return "info";
+  }
+}
+
+function noveltyHeadline(signal: NoveltySignal) {
+  switch (signal) {
+    case "exact match found":
+    case "similar work exists":
+      return "Has this been done before?";
+    case "not found":
+      return "No close prior work found.";
+    default:
+      return "Prior work check";
+  }
+}
+
+function noveltyCaption(signal: NoveltySignal) {
+  switch (signal) {
+    case "exact match found":
+    case "similar work exists":
+      return "Review the closest sources before claiming novelty.";
+    case "not found":
+      return "Proceed to draft a protocol from the closest available sources.";
+    default:
+      return "";
+  }
 }
 
 function sectionBody(section: ProtocolSection) {
@@ -146,34 +217,149 @@ function HeroHeadline() {
   );
 }
 
+function StepNav({ step }: { step: number }) {
+  return (
+    <nav className="step-nav" aria-label="Progress">
+      {STEP_LABELS.map((label, idx) => {
+        const num = idx + 1;
+        const state = num < step ? "done" : num === step ? "active" : "todo";
+        return (
+          <div key={label} className={`step is-${state}`}>
+            <span className="step-bullet" aria-hidden="true">
+              {state === "done" ? "✓" : num}
+            </span>
+            <span className="step-label">{label}</span>
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
+function PaperRef({ paper, index }: { paper: Paper; index: number }) {
+  const num = String(index + 1).padStart(2, "0");
+  const authors = paper.authors?.slice(0, 3).join(", ") || "";
+  const doi = shortDoi(paper.doi);
+  const meta: Array<{ key: string; node: React.ReactNode; tone?: "accent" }> = [];
+  if (authors) meta.push({ key: "authors", node: <b>{authors}</b> });
+  if (paper.year) meta.push({ key: "year", node: <span>{paper.year}</span> });
+  if (doi) meta.push({ key: "doi", node: <span className="ref-doi">DOI {doi}</span>, tone: "accent" });
+  if (paper.source && paper.source !== "Unknown") {
+    meta.push({ key: "source", node: <span>{paper.source}</span> });
+  }
+
+  return (
+    <a
+      className="ref"
+      href={paper.url || (doi ? `https://doi.org/${doi}` : "#")}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <div className="ref-num">[{num}]</div>
+      <div className="ref-body">
+        <div className="ref-title">
+          <SciTitle html={paper.title} />
+          <span className="ref-link-icon" aria-hidden="true">↗</span>
+        </div>
+        {meta.length ? (
+          <div className="ref-meta">
+            {meta.map((item, i) => (
+              <span key={item.key}>
+                {item.node}
+                {i < meta.length - 1 ? <span className="ref-sep"> · </span> : null}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </a>
+  );
+}
+
+function NoveltyReview({
+  result,
+  onContinue,
+  isBusy,
+}: {
+  result: LiteratureQCResponse;
+  onContinue: () => void;
+  isBusy: boolean;
+}) {
+  const signal = result.qc.novelty_signal;
+  const tone = noveltyPillTone(signal);
+  return (
+    <section className="card novelty-card">
+      <div className="card-head">
+        <div>
+          <h3 className="card-title">{noveltyHeadline(signal)}</h3>
+          <div className="card-sub">{result.papers.length} source records found.</div>
+        </div>
+      </div>
+      <div className="card-body">
+        <div className={`novelty-row tone-${tone}`}>
+          <span className={`novelty-pill tone-${tone}`}>
+            <span className="pill-dot" aria-hidden="true" /> {noveltyPillText(signal)}
+          </span>
+          <p className="novelty-caption">{noveltyCaption(signal) || result.qc.explanation}</p>
+        </div>
+        <div className="refs">
+          {result.papers.slice(0, 5).map((paper, index) => (
+            <PaperRef key={paper.id} paper={paper} index={index} />
+          ))}
+          {!result.papers.length ? (
+            <p className="empty">No source papers were returned.</p>
+          ) : null}
+        </div>
+        <div className="novelty-actions">
+          <button
+            className="btn primary"
+            type="button"
+            onClick={onContinue}
+            disabled={isBusy || !result.protocols.length}
+          >
+            Find matching protocols <span aria-hidden="true">→</span>
+          </button>
+          {!result.protocols.length ? (
+            <span className="muted-note">No protocol records to match yet.</span>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ProtocolCard({
   protocol,
   selected,
   onSelect,
+  isBusy,
 }: {
   protocol: Protocol;
   selected: boolean;
   onSelect: () => void;
+  isBusy: boolean;
 }) {
   return (
     <article className={`candidate ${selected ? "is-selected" : ""}`}>
-      <div>
+      <div className="cand-main">
         <div className="cand-head">
           <span className="source-badge">{protocol.source}</span>
           <span className="cand-meta">{scoreLabel(protocol.match_score)}</span>
         </div>
-        <h4 className="cand-title">{protocol.title}</h4>
+        <h4 className="cand-title">
+          <SciTitle html={protocol.title} />
+        </h4>
         <p className="cand-summary">
           {shortText(protocol.description || protocol.match_reason || "Source-linked protocol.")}
         </p>
       </div>
       <div className="cand-actions">
         {protocol.url ? (
-          <a className="cand-link" href={protocol.url} target="_blank" rel="noreferrer">
+          <a className="cand-link" href={protocol.url} target="_blank" rel="noreferrer" aria-label="Open source">
             ↗
           </a>
         ) : null}
-        <button className="cand-btn" type="button" onClick={onSelect}>
+        <button className="cand-btn" type="button" onClick={onSelect} disabled={isBusy}>
           {selected ? "Selected" : "Use this"}
         </button>
       </div>
@@ -181,29 +367,44 @@ function ProtocolCard({
   );
 }
 
-function PaperList({ result }: { result: LiteratureQCResponse }) {
+function ProtocolPicker({
+  result,
+  selectedProtocol,
+  onSelect,
+  onBack,
+  isBusy,
+}: {
+  result: LiteratureQCResponse;
+  selectedProtocol: Protocol | null;
+  onSelect: (p: Protocol) => void;
+  onBack: () => void;
+  isBusy: boolean;
+}) {
   return (
     <section className="card">
-      <div className="card-head">
+      <div className="card-head card-head-row">
         <div>
-          <h3 className="card-title">Source papers</h3>
-          <div className="card-sub">{result.papers.length} source records found.</div>
+          <h3 className="card-title">Pick a base protocol</h3>
+          <div className="card-sub">Pick the closest source. The draft stays linked to it.</div>
         </div>
+        <button className="link-btn" type="button" onClick={onBack}>
+          ← Back to sources
+        </button>
       </div>
-      <div className="card-body refs">
-        {result.papers.slice(0, 5).map((paper, index) => (
-          <a className="ref" href={paper.url || "#"} target="_blank" rel="noreferrer" key={paper.id}>
-            <div className="ref-num">[{String(index + 1).padStart(2, "0")}]</div>
-            <div>
-              <div className="ref-title">{paper.title}</div>
-              <div className="ref-meta">
-                <b>{paper.authors?.slice(0, 3).join(", ") || paper.source}</b>
-                {paper.year ? ` · ${paper.year}` : ""}
-                {paper.doi ? ` · DOI ${paper.doi}` : ""}
-              </div>
-            </div>
-          </a>
-        ))}
+      <div className="card-body candidates">
+        {result.protocols.length ? (
+          result.protocols.slice(0, 6).map((protocol) => (
+            <ProtocolCard
+              key={protocol.id}
+              protocol={protocol}
+              selected={selectedProtocol?.id === protocol.id}
+              onSelect={() => onSelect(protocol)}
+              isBusy={isBusy}
+            />
+          ))
+        ) : (
+          <p className="empty">No protocol records found.</p>
+        )}
       </div>
     </section>
   );
@@ -226,7 +427,7 @@ function ProtocolDraft({
           <span className="dot" />
           <span>Protocol draft</span>
         </div>
-        <h2>{protocol.title}</h2>
+        <h2><SciTitle html={protocol.title} /></h2>
         <p className="blurb">{protocol.goal}</p>
         <div className="plan-stats">
           <div className="stat">
@@ -292,18 +493,24 @@ function ProtocolDraft({
 export default function App() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<LiteratureQCResponse | null>(null);
+  const [pickStage, setPickStage] = useState<PickStage>("novelty");
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeVersion, setActiveVersion] = useState<ProtocolVersion | null>(null);
+  const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
 
   const isWorking = Boolean(result || isBusy || error);
-  const noveltyText = useMemo(() => {
-    if (!result) return "";
-    return `${result.qc.novelty_signal}. ${result.qc.explanation}`;
-  }, [result]);
+
+  const currentStep = useMemo(() => {
+    if (accepted) return 5;
+    if (activeVersion) return 4;
+    if (result) return 3;
+    if (isBusy) return 2;
+    return 1;
+  }, [accepted, activeVersion, result, isBusy]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -315,6 +522,8 @@ export default function App() {
     setSelectedProtocol(null);
     setActiveVersion(null);
     setSessionId(null);
+    setAccepted(false);
+    setPickStage("novelty");
     setError(null);
     setStatus("Searching sources");
 
@@ -367,6 +576,7 @@ export default function App() {
     setStatus("Approving protocol");
     try {
       await acceptProtocol(sessionId, activeVersion.id);
+      setAccepted(true);
       setStatus("Protocol approved");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Approval failed.");
@@ -381,6 +591,8 @@ export default function App() {
     setSelectedProtocol(null);
     setActiveVersion(null);
     setSessionId(null);
+    setAccepted(false);
+    setPickStage("novelty");
     setError(null);
     setStatus(null);
   }
@@ -392,7 +604,15 @@ export default function App() {
           <img className="mark" src="/logo.png" alt="" />
           <span className="name">Protheus</span>
         </div>
-        <button className="gear-btn" type="button" aria-label="Settings">⚙</button>
+        <div className="topbar-right">
+          {isWorking ? (
+            <span className="sample-pill" title="Demo data is being used">
+              <span className="sample-dot" aria-hidden="true" />
+              Sample mode
+            </span>
+          ) : null}
+          <button className="gear-btn" type="button" aria-label="Settings">⚙</button>
+        </div>
       </header>
 
       <main className="stage">
@@ -426,50 +646,31 @@ export default function App() {
               <button className="qedit" type="button" onClick={reset}>Edit · Restart</button>
             </div>
 
+            <StepNav step={currentStep} />
+
             {status ? <div className="card status-card">{status}</div> : null}
             {error ? <div className="card error-card">{error}</div> : null}
 
-            {result ? (
-              <>
-                <section className="card">
-                  <div className="card-head">
-                    <div>
-                      <h3 className="card-title">Literature QC</h3>
-                      <div className="card-sub">{noveltyText}</div>
-                    </div>
-                  </div>
-                </section>
+            {result && !activeVersion ? (
+              pickStage === "novelty" ? (
+                <NoveltyReview
+                  result={result}
+                  onContinue={() => setPickStage("protocols")}
+                  isBusy={isBusy}
+                />
+              ) : (
+                <ProtocolPicker
+                  result={result}
+                  selectedProtocol={selectedProtocol}
+                  onSelect={handleGenerate}
+                  onBack={() => setPickStage("novelty")}
+                  isBusy={isBusy}
+                />
+              )
+            ) : null}
 
-                <div className="result-grid">
-                  <PaperList result={result} />
-                  <section className="card">
-                    <div className="card-head">
-                      <div>
-                        <h3 className="card-title">Pick a base protocol</h3>
-                        <div className="card-sub">Pick the closest source. The draft stays linked to it.</div>
-                      </div>
-                    </div>
-                    <div className="card-body candidates">
-                      {result.protocols.length ? (
-                        result.protocols.slice(0, 6).map((protocol) => (
-                          <ProtocolCard
-                            key={protocol.id}
-                            protocol={protocol}
-                            selected={selectedProtocol?.id === protocol.id}
-                            onSelect={() => void handleGenerate(protocol)}
-                          />
-                        ))
-                      ) : (
-                        <p className="empty">No protocol records found.</p>
-                      )}
-                    </div>
-                  </section>
-                </div>
-
-                {activeVersion ? (
-                  <ProtocolDraft version={activeVersion} onAccept={handleAccept} isBusy={isBusy} />
-                ) : null}
-              </>
+            {activeVersion ? (
+              <ProtocolDraft version={activeVersion} onAccept={handleAccept} isBusy={isBusy} />
             ) : null}
           </section>
         )}
