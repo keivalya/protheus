@@ -33,6 +33,90 @@ KNOWN_PROTOCOLS = [
             "striatal or ventral forebrain organoids/spheroids",
         ],
     },
+    {
+        "id": "protocols.io:uibeuan",
+        "title": "CRISPR Editing of Immortalized Cells with RNPs using Lipofection",
+        "year": None,
+        "url": "https://www.protocols.io/view/crispr-editing-of-immortalized-cells-with-rnps-usi-uibeuan.html",
+        "source": "protocols.io",
+        "description": "High-level protocols.io record for CRISPR editing of immortalized cells using Cas9 RNP lipofection.",
+        "steps_preview": [
+            "Plan Cas9 RNP editing workflow for an immortalized adherent cell model.",
+            "Deliver CRISPR RNP by lipofection.",
+            "Review editing outcome and downstream clone-selection requirements.",
+        ],
+        "materials_preview": ["Cas9 RNP", "lipofection reagent", "immortalized cell culture"],
+    },
+    {
+        "id": "protocols.io:frjbm4n",
+        "title": "Transfection of Cas9 RNP (ribonucleoprotein) into adherent cells using the Lipofectamine RNAiMAX",
+        "year": None,
+        "url": "https://www.protocols.io/view/transfection-of-cas9-rnp-ribonucleoprotein-into-ad-frjbm4n",
+        "source": "protocols.io",
+        "description": "High-level protocols.io record for Cas9 RNP transfection into adherent cells using Lipofectamine RNAiMAX.",
+        "steps_preview": [
+            "Prepare adherent cells for Cas9 RNP delivery.",
+            "Deliver Cas9 RNP with Lipofectamine RNAiMAX.",
+            "Review post-transfection recovery and editing validation needs.",
+        ],
+        "materials_preview": ["Cas9 RNP", "Lipofectamine RNAiMAX", "adherent cells"],
+    },
+    {
+        "id": "protocols.io:srqed5w",
+        "title": "Limiting Dilution & Clonal Expansion",
+        "year": None,
+        "url": "https://www.protocols.io/view/limiting-dilution-clonal-expansion-srqed5w",
+        "source": "protocols.io",
+        "description": "High-level protocols.io record for limiting dilution and clonal expansion after cell engineering.",
+        "steps_preview": [
+            "Seed edited cells for limiting dilution.",
+            "Expand candidate clonal populations.",
+            "Review clone validation and recordkeeping requirements.",
+        ],
+        "materials_preview": ["edited cells", "culture plates", "clonal expansion medium"],
+    },
+    {
+        "id": "protocols.io:q26g74xqqgwz",
+        "title": "Lipid droplet visualisation in cultured cells using BODIPY 493/503 stain",
+        "year": None,
+        "url": "https://www.protocols.io/view/lipid-droplet-visualisation-in-cultured-cells-usin-q26g74xqqgwz/v1",
+        "source": "protocols.io",
+        "description": "High-level protocols.io record for visualizing lipid droplets in cultured cells using BODIPY 493/503 staining.",
+        "steps_preview": [
+            "Prepare cultured cells for lipid droplet staining.",
+            "Apply BODIPY 493/503 staining workflow.",
+            "Review lipid droplet imaging and quantification readouts.",
+        ],
+        "materials_preview": ["BODIPY 493/503", "cultured cells", "fluorescence imaging reagents"],
+    },
+    {
+        "id": "protocols.io:d6wq9fdw",
+        "title": "Cell Viability Protocol using CellTiter-Glo 3D",
+        "year": None,
+        "url": "https://www.protocols.io/view/cell-viability-protocol-using-celltiter-glo-3d-d6wq9fdw",
+        "source": "protocols.io",
+        "description": "High-level protocols.io record for measuring 3D culture/organoid viability with CellTiter-Glo 3D.",
+        "steps_preview": [
+            "Prepare 3D cultures or organoids for viability readout.",
+            "Apply CellTiter-Glo 3D viability assay.",
+            "Review luminescence-based viability analysis.",
+        ],
+        "materials_preview": ["CellTiter-Glo 3D", "3D cultures", "plate reader"],
+    },
+    {
+        "id": "protocols.io:x54v92rb1l3e",
+        "title": "Organoid Drug Treatment",
+        "year": None,
+        "url": "https://www.protocols.io/view/organoid-drug-treatment-dfna3mae.html",
+        "source": "protocols.io",
+        "description": "High-level protocols.io record for treating organoids with drug conditions before downstream readout.",
+        "steps_preview": [
+            "Prepare organoids for drug treatment.",
+            "Expose organoids to selected compound conditions.",
+            "Review downstream viability or response readout requirements.",
+        ],
+        "materials_preview": ["organoids", "drug treatment conditions", "culture plates"],
+    },
 ]
 
 
@@ -123,6 +207,20 @@ def _known_protocol_matches(search_queries: list[str]) -> list[dict[str, Any]]:
         "cortical and striatal",
         "forebrain spheroid",
     ]
+    tfeb_markers = [
+        "tfeb",
+        "hepg2",
+        "lipid droplet",
+        "bodipy",
+        "cas9 rnp",
+        "clonal expansion",
+    ]
+    crc_markers = [
+        "colorectal cancer",
+        "patient-derived organoid",
+        "celltiter-glo 3d",
+        "organoid drug treatment",
+    ]
     concept_terms = [
         "assembloid",
         "assembloids",
@@ -140,10 +238,23 @@ def _known_protocol_matches(search_queries: list[str]) -> list[dict[str, Any]]:
         "hipsc",
         "ipsc",
     ]
+    assembloid_ids = {"protocols.io:36wgq4xxkvk5"}
+    tfeb_ids = {
+        "protocols.io:uibeuan",
+        "protocols.io:frjbm4n",
+        "protocols.io:srqed5w",
+        "protocols.io:q26g74xqqgwz",
+    }
+    crc_ids = {"protocols.io:d6wq9fdw", "protocols.io:x54v92rb1l3e"}
+
     if any(marker in query_text for marker in strong_markers):
-        return [dict(protocol) for protocol in KNOWN_PROTOCOLS]
+        return [dict(p) for p in KNOWN_PROTOCOLS if p["id"] in assembloid_ids]
     if "assembloid" in query_text and sum(1 for term in concept_terms if term in query_text) >= 4:
-        return [dict(protocol) for protocol in KNOWN_PROTOCOLS]
+        return [dict(p) for p in KNOWN_PROTOCOLS if p["id"] in assembloid_ids]
+    if sum(1 for marker in tfeb_markers if marker in query_text) >= 2:
+        return [dict(p) for p in KNOWN_PROTOCOLS if p["id"] in tfeb_ids]
+    if sum(1 for marker in crc_markers if marker in query_text) >= 2:
+        return [dict(p) for p in KNOWN_PROTOCOLS if p["id"] in crc_ids]
     return []
 
 
