@@ -1,0 +1,10 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+httpx==0.28.1
+python-dotenv==1.1.0
+urllib3==1.26.20
+eval_type_backport==0.2.2
+rapidfuzz==3.13.0
+rank-bm25==0.2.2
+openai>=1.70.0
+instructor>=1.7.0

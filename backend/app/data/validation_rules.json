@@ -1,0 +1,102 @@
+{
+  "default": {
+    "required_sections": [
+      "title",
+      "goal",
+      "materials_and_reagents",
+      "adapted_workflow",
+      "controls",
+      "validation_readout",
+      "risks_and_limitations",
+      "open_questions"
+    ],
+    "required_validation_items": [
+      "control condition",
+      "quantitative or marker-based readout",
+      "missing information list",
+      "researcher-review disclaimer"
+    ],
+    "vague_phrases": [
+      "standard method",
+      "standard protocol",
+      "validate results",
+      "as needed",
+      "appropriate conditions",
+      "optimize conditions",
+      "follow manufacturer instructions"
+    ],
+    "safety_flags": [
+      "human samples",
+      "animal study",
+      "infectious agent",
+      "clinical use",
+      "genetic engineering",
+      "BSL-2 or higher"
+    ]
+  },
+  "cell_biology": {
+    "required_sections": [
+      "title",
+      "goal",
+      "materials_and_reagents",
+      "adapted_workflow",
+      "controls",
+      "validation_readout",
+      "risks_and_limitations",
+      "open_questions"
+    ],
+    "required_validation_items": [
+      "positive control",
+      "negative control",
+      "quantitative readout",
+      "replicates or repeatability note",
+      "missing information list"
+    ],
+    "vague_phrases": [
+      "standard cell culture conditions",
+      "validate differentiation",
+      "check markers",
+      "optimize media",
+      "appropriate controls"
+    ],
+    "safety_flags": [
+      "human samples",
+      "animal study",
+      "infectious agent",
+      "clinical use",
+      "genetic engineering",
+      "BSL-2 or higher"
+    ]
+  },
+  "diagnostics / biosensing": {
+    "required_sections": [
+      "title",
+      "goal",
+      "materials_and_reagents",
+      "adapted_workflow",
+      "controls",
+      "validation_readout",
+      "risks_and_limitations",
+      "open_questions"
+    ],
+    "required_validation_items": [
+      "positive control",
+      "negative control",
+      "limit of detection or sensitivity note",
+      "matrix or sample type",
+      "missing information list"
+    ],
+    "vague_phrases": [
+      "standard detection",
+      "validate sensor",
+      "measure signal",
+      "appropriate controls"
+    ],
+    "safety_flags": [
+      "human samples",
+      "clinical use",
+      "biohazard",
+      "BSL-2 or higher"
+    ]
+  }
+}

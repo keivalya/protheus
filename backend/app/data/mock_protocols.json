@@ -1,0 +1,173 @@
+{
+  "protocols": [
+    {
+      "id": "mock-cryopreservation-hela-trehalose",
+      "title": "HeLa cell cryopreservation with DMSO and trehalose additives",
+      "year": 2023,
+      "url": "https://www.protocols.io/view/mock-hela-cell-cryopreservation-trehalose",
+      "source": "protocols.io",
+      "description": "Freezing and thawing HeLa cells with DMSO-containing medium and optional trehalose or sucrose cryoprotectant additives, followed by post-thaw viability measurement.",
+      "steps_preview": [
+        "Prepare HeLa cells in logarithmic growth phase.",
+        "Suspend cells in freezing medium containing DMSO and candidate sugar additive.",
+        "Freeze at controlled rate and evaluate post-thaw viability after recovery."
+      ],
+      "materials_preview": ["HeLa cells", "DMSO", "trehalose", "sucrose", "viability dye"]
+    },
+    {
+      "id": "mock-mammalian-cell-freezing",
+      "title": "Mammalian cell freezing and thawing viability assay",
+      "year": 2021,
+      "url": "https://www.protocols.io/view/mock-mammalian-cell-freezing-viability",
+      "source": "protocols.io",
+      "description": "Standard mammalian cell cryopreservation workflow using DMSO and a post-thaw cell viability assay.",
+      "steps_preview": [
+        "Combine cell suspension with chilled cryopreservation medium.",
+        "Transfer vials to controlled-rate freezing container.",
+        "Thaw rapidly and assess viability."
+      ],
+      "materials_preview": ["mammalian cells", "DMSO", "freezing medium", "trypan blue"]
+    },
+    {
+      "id": "mock-crp-paper-electrochemical",
+      "title": "Paper-based electrochemical CRP immunosensor protocol",
+      "year": 2024,
+      "url": "https://www.protocols.io/view/mock-paper-electrochemical-crp-immunosensor",
+      "source": "protocols.io",
+      "description": "Fabrication of a paper-based electrochemical biosensor functionalized with anti-CRP antibodies to detect C-reactive protein in whole blood or plasma.",
+      "steps_preview": [
+        "Print carbon working electrodes on wax-patterned paper.",
+        "Functionalize the electrode with anti-CRP capture antibodies.",
+        "Apply diluted whole blood sample and read the electrochemical signal within 10 minutes."
+      ],
+      "materials_preview": ["paper electrode", "anti-CRP antibodies", "whole blood", "potentiostat", "blocking buffer"]
+    },
+    {
+      "id": "mock-crp-lateral-flow",
+      "title": "Rapid C-reactive protein detection from blood samples",
+      "year": 2022,
+      "url": "https://www.protocols.io/view/mock-crp-rapid-blood-detection",
+      "source": "protocols.io",
+      "description": "Rapid immunoassay workflow for C-reactive protein in whole blood and serum samples.",
+      "steps_preview": [
+        "Prepare anti-CRP antibody conjugates.",
+        "Add blood sample to the test strip.",
+        "Record signal intensity against CRP calibrators."
+      ],
+      "materials_preview": ["anti-CRP antibody", "whole blood", "CRP standards", "sample pad"]
+    },
+    {
+      "id": "mock-lgg-c57-intestinal-permeability",
+      "title": "Lactobacillus rhamnosus GG supplementation and intestinal permeability in C57BL/6 mice",
+      "year": 2020,
+      "url": "https://www.protocols.io/view/mock-lgg-c57bl6-intestinal-permeability",
+      "source": "protocols.io",
+      "description": "Four-week oral Lactobacillus rhamnosus GG supplementation in C57BL/6 mice followed by FITC-dextran intestinal permeability measurement against untreated controls.",
+      "steps_preview": [
+        "Randomize C57BL/6 mice into control and LGG supplementation groups.",
+        "Administer Lactobacillus rhamnosus GG by oral gavage for 4 weeks.",
+        "Quantify intestinal permeability using plasma FITC-dextran fluorescence."
+      ],
+      "materials_preview": ["C57BL/6 mice", "Lactobacillus rhamnosus GG", "FITC-dextran", "gavage needles"]
+    },
+    {
+      "id": "mock-fitc-dextran-mice",
+      "title": "FITC-dextran intestinal permeability assay in mice",
+      "year": 2019,
+      "url": "https://www.protocols.io/view/mock-fitc-dextran-intestinal-permeability",
+      "source": "protocols.io",
+      "description": "Mouse gut barrier assay for measuring intestinal permeability by oral FITC-dextran administration and plasma fluorescence.",
+      "steps_preview": [
+        "Fast mice before FITC-dextran administration.",
+        "Administer FITC-dextran by oral gavage.",
+        "Collect blood and measure fluorescence."
+      ],
+      "materials_preview": ["mice", "FITC-dextran", "fluorescence plate reader", "PBS"]
+    },
+    {
+      "id": "mock-celltiter-viability",
+      "title": "Cell viability measurement using luminescent reagent",
+      "year": 2020,
+      "url": "https://www.protocols.io/view/mock-luminescent-cell-viability",
+      "source": "protocols.io",
+      "description": "Generic endpoint assay for quantifying cell viability after treatment or recovery.",
+      "steps_preview": [
+        "Seed cells in a white-walled plate.",
+        "Add luminescent viability reagent.",
+        "Read luminescence after incubation."
+      ],
+      "materials_preview": ["cultured cells", "luminescent viability reagent", "plate reader"]
+    },
+    {
+      "id": "mock-electrode-functionalization",
+      "title": "Antibody functionalization of carbon electrodes",
+      "year": 2021,
+      "url": "https://www.protocols.io/view/mock-antibody-functionalized-electrodes",
+      "source": "protocols.io",
+      "description": "Surface chemistry workflow for immobilizing antibodies on carbon electrodes for electrochemical immunoassays.",
+      "steps_preview": [
+        "Clean carbon electrode surface.",
+        "Activate surface groups for antibody attachment.",
+        "Block non-specific binding sites before sample exposure."
+      ],
+      "materials_preview": ["carbon electrode", "capture antibody", "EDC", "NHS", "blocking buffer"]
+    },
+    {
+      "id": "mock-probiotic-gavage",
+      "title": "Daily probiotic gavage in laboratory mice",
+      "year": 2018,
+      "url": "https://www.protocols.io/view/mock-probiotic-gavage-mice",
+      "source": "protocols.io",
+      "description": "Administration of probiotic bacteria to mice by oral gavage with vehicle control handling.",
+      "steps_preview": [
+        "Prepare fresh probiotic suspension.",
+        "Dose mice by oral gavage at the scheduled time.",
+        "Record body weight and adverse events."
+      ],
+      "materials_preview": ["laboratory mice", "probiotic suspension", "gavage needle", "vehicle control"]
+    },
+    {
+      "id": "mock-whole-blood-sample-prep",
+      "title": "Whole blood sample preparation for rapid biosensor assays",
+      "year": 2022,
+      "url": "https://www.protocols.io/view/mock-whole-blood-biosensor-prep",
+      "source": "protocols.io",
+      "description": "Minimal whole blood sample handling before rapid electrochemical or optical biosensor readouts.",
+      "steps_preview": [
+        "Collect anticoagulated whole blood.",
+        "Dilute sample in assay buffer if required.",
+        "Apply sample to the biosensor within the validated time window."
+      ],
+      "materials_preview": ["whole blood", "assay buffer", "biosensor cartridge", "pipettes"]
+    },
+    {
+      "id": "mock-standard-dmso-cell-bank",
+      "title": "Standard DMSO cell banking protocol for adherent cell lines",
+      "year": 2017,
+      "url": "https://www.protocols.io/view/mock-standard-dmso-cell-bank",
+      "source": "protocols.io",
+      "description": "Reference cell banking protocol for adherent cell lines using DMSO-containing cryopreservation medium.",
+      "steps_preview": [
+        "Harvest adherent cells at healthy confluence.",
+        "Resuspend cells in standard DMSO freezing medium.",
+        "Freeze vials and transfer to long-term storage."
+      ],
+      "materials_preview": ["adherent cell line", "DMSO", "fetal bovine serum", "cryovials"]
+    },
+    {
+      "id": "mock-antibody-sandwich-immunoassay",
+      "title": "Sandwich immunoassay setup for inflammatory biomarkers",
+      "year": 2019,
+      "url": "https://www.protocols.io/view/mock-inflammatory-biomarker-immunoassay",
+      "source": "protocols.io",
+      "description": "Generic capture and detection antibody workflow for soluble inflammatory biomarkers including CRP.",
+      "steps_preview": [
+        "Coat surface with capture antibody.",
+        "Add standard or biological sample.",
+        "Read bound detection antibody signal."
+      ],
+      "materials_preview": ["capture antibody", "detection antibody", "CRP standard", "wash buffer"]
+    }
+  ]
+}
+
