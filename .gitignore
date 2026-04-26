@@ -41,8 +41,6 @@ pnpm-debug.log*
 backend/app/data/*.sqlite3
 backend/app/data/*.sqlite3-*
 backend/app/data/chroma/
-backend/app/data/grounding_corpus/
-backend/app/data/validation_corpus/
 backend/app/data/observability/
 backend/app/data/evaluations/
 

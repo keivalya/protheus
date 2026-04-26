@@ -47,8 +47,35 @@ PY
     "$0" download
     "$0" index
     ;;
+  status)
+    (
+      cd backend
+      python - <<'PY'
+import json
+from pathlib import Path
+
+paths = {
+    "sqlite": Path("app/data/ai_scientist.sqlite3"),
+    "curated_corpus": Path("app/data/grounding_corpus/curated_protocol_examples.json"),
+    "corpus_manifest": Path("app/data/grounding_corpus/corpus_manifest.json"),
+    "embedding_manifest": Path("app/data/grounding_corpus/corpus_embedding_manifest.json"),
+    "chroma_seed": Path("app/data/chroma_seed/chroma.sqlite3"),
+    "runtime_chroma": Path("app/data/chroma/chroma.sqlite3"),
+}
+for name, path in paths.items():
+    print(f"{name}: {'present' if path.exists() else 'missing'} {path}")
+if paths["corpus_manifest"].exists():
+    manifest = json.loads(paths["corpus_manifest"].read_text())
+    print(f"curated_examples_total: {manifest.get('curated_examples_total')}")
+if paths["embedding_manifest"].exists():
+    manifest = json.loads(paths["embedding_manifest"].read_text())
+    print(f"indexed_examples: {manifest.get('indexed_examples')}")
+    print(f"embedding_model: {manifest.get('embedding_model')}")
+PY
+    )
+    ;;
   *)
-    echo "Usage: scripts/data.sh [init-db|download|index|bootstrap]" >&2
+    echo "Usage: scripts/data.sh [init-db|download|index|bootstrap|status]" >&2
     echo "Environment: INDEX_LIMIT=5000 INDEX_BATCH_SIZE=128" >&2
     exit 1
     ;;

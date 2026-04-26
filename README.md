@@ -28,12 +28,12 @@ Node.js 20+
 npm
 ```
 
-Setup:
+Complete setup:
 
 ```bash
 git clone https://github.com/keivalya/protheus.git
 cd protheus
-npm run setup
+npm run setup:full
 ```
 
 Add keys if available:
@@ -63,14 +63,21 @@ Frontend: http://127.0.0.1:5173
 Backend:  http://127.0.0.1:8000
 ```
 
-Optional local retrieval setup:
+Lightweight setup without optional local embedding libraries:
 
 ```bash
-npm run setup:optional
+npm run setup
+```
+
+The repository includes the curated protocol corpus and a seed Chroma embedding index. `setup:full` installs the optional ChromaDB/SentenceTransformers/SciSpaCy dependencies and copies the seed index into local runtime storage. Use the lightweight setup only if you want the app to run with deterministic fallbacks and without local embedding retrieval.
+
+Rebuild local retrieval data:
+
+```bash
 npm run data:bootstrap
 ```
 
-That installs ChromaDB, SentenceTransformers, and SciSpaCy, downloads the local grounding corpus, and builds the Chroma embedding index. It is not required for the basic demo.
+That re-downloads the local grounding corpus and rebuilds the runtime Chroma embedding index. It is not required because the repo already includes the current curated corpus and seed embedding index.
 
 Data commands:
 
@@ -78,6 +85,7 @@ Data commands:
 npm run data:init       # create/update local SQLite tables
 npm run data:download   # download and curate the local protocol corpus
 npm run data:index      # build the Chroma embedding index
+npm run data:status     # show local corpus/index state
 ```
 
 Local runtime data is intentionally not committed:
@@ -85,8 +93,6 @@ Local runtime data is intentionally not committed:
 ```text
 backend/app/data/ai_scientist.sqlite3
 backend/app/data/chroma/
-backend/app/data/grounding_corpus/
-backend/app/data/validation_corpus/
 backend/app/data/evaluations/
 backend/app/data/observability/
 ```

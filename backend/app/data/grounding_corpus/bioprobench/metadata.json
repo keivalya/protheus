@@ -1,0 +1,77 @@
+{
+  "_id": "6820a3bdc434fd4ae1c8494f",
+  "author": "BioProBench",
+  "cardData": {
+    "license": "cc-by-4.0"
+  },
+  "createdAt": "2025-05-11T13:18:53.000Z",
+  "disabled": false,
+  "downloads": 2484,
+  "gated": false,
+  "id": "BioProBench/BioProBench",
+  "lastModified": "2026-03-31T16:38:17.000Z",
+  "likes": 3,
+  "private": false,
+  "sha": "08c23fa5ee9dc18e16a3dbe5b4e75530b4c8be21",
+  "siblings": [
+    {
+      "rfilename": ".gitattributes"
+    },
+    {
+      "rfilename": "Bio-protocol.json"
+    },
+    {
+      "rfilename": "ERR.json"
+    },
+    {
+      "rfilename": "ERR_test.json"
+    },
+    {
+      "rfilename": "ERR_train.json"
+    },
+    {
+      "rfilename": "GEN.json"
+    },
+    {
+      "rfilename": "GEN_test.json"
+    },
+    {
+      "rfilename": "GEN_train.json"
+    },
+    {
+      "rfilename": "ORD.json"
+    },
+    {
+      "rfilename": "ORD_test.json"
+    },
+    {
+      "rfilename": "ORD_train.json"
+    },
+    {
+      "rfilename": "PQA.json"
+    },
+    {
+      "rfilename": "PQA_test.json"
+    },
+    {
+      "rfilename": "PQA_train.json"
+    },
+    {
+      "rfilename": "PQA_with_context_train.json"
+    },
+    {
+      "rfilename": "Protocol-exchange.json"
+    },
+    {
+      "rfilename": "Protocol-io.json"
+    },
+    {
+      "rfilename": "README.md"
+    }
+  ],
+  "tags": [
+    "license:cc-by-4.0",
+    "region:us"
+  ],
+  "usedStorage": 967976674
+}

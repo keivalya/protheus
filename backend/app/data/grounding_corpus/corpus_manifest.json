@@ -1,0 +1,39 @@
+{
+  "curated_examples_path": "grounding_corpus/curated_protocol_examples.json",
+  "curated_examples_target": 5000,
+  "curated_examples_total": 5000,
+  "sources": {
+    "bioprobench": {
+      "bytes_on_disk": 5465004,
+      "curated_examples": 3800,
+      "files_downloaded": 5,
+      "notes": [
+        "Remote repository usedStorage bytes: 967976674",
+        "Remote downloads count: 2484",
+        "Downloaded small test/error/order/QA subset for hackathon grounding."
+      ],
+      "raw_records_seen": 4333,
+      "source": "BioProBench/BioProBench"
+    },
+    "bioprot": {
+      "bytes_on_disk": 610755,
+      "curated_examples": 100,
+      "files_downloaded": 100,
+      "notes": [
+        "Downloaded BioProt JSON protocol files from GitHub."
+      ],
+      "raw_records_seen": 100,
+      "source": "bioplanner/bioplanner bioprot"
+    },
+    "wet_lab_protocol_corpus": {
+      "bytes_on_disk": 5982098,
+      "curated_examples": 1100,
+      "files_downloaded": 1252,
+      "notes": [
+        "Downloaded ACL Anthology N18-2016 dataset zip and extracted it."
+      ],
+      "raw_records_seen": 1246,
+      "source": "Wet Lab Protocol Corpus"
+    }
+  }
+}

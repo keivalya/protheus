@@ -1,0 +1,3 @@
+backend/app/data/chroma_seed/** binary
+backend/app/data/grounding_corpus/bioprot/** -whitespace
+backend/app/data/validation_corpus/** -whitespace

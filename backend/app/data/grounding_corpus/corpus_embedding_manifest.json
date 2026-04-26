@@ -1,0 +1,9 @@
+{
+  "chroma_path": "chroma",
+  "collection": "protocol_corpus_examples",
+  "curated_examples_total": 5000,
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "indexed_examples": 5000,
+  "source_examples_path": "grounding_corpus/curated_protocol_examples.json",
+  "status": "built"
+}
