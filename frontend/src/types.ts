@@ -206,6 +206,10 @@ export type CustomProtocolDraft = {
   reference_examples_used: CorpusExampleReference[];
   validated_entities: EntityValidation[];
   extracted_protocol_evidence: ExtractedProtocolEvidence[];
+  generation_backend?: string | null;
+  generation_model?: string | null;
+  reasoning_effort?: string | null;
+  generation_error?: string | null;
 };
 
 export type ProtocolVersion = {
@@ -283,4 +287,116 @@ export type TransparencyEvent = {
 export type TransparencyEventsResponse = {
   session_id: string;
   events: TransparencyEvent[];
+};
+
+export type PriceStatus =
+  | "rough_web_estimate"
+  | "catalog_only"
+  | "price_not_found"
+  | "multiple_prices_found"
+  | "needs_procurement_confirmation";
+
+export type ImageStatus =
+  | "product_image_found"
+  | "vendor_logo_only"
+  | "category_icon_only"
+  | "image_not_found";
+
+export type MoneyRange = {
+  min?: number | null;
+  max?: number | null;
+  currency: string;
+};
+
+export type SupplierCandidate = {
+  vendor?: string | null;
+  product_name?: string | null;
+  catalog_number?: string | null;
+  package_size?: string | null;
+  estimated_price_range: MoneyRange;
+  price_status: PriceStatus;
+  product_url?: string | null;
+  image_url?: string | null;
+  image_status: ImageStatus;
+  confidence: "low" | "medium" | "high";
+  last_checked: string;
+  source_urls?: string[];
+  notes?: string[];
+};
+
+export type SupplyChainItem = {
+  item_name: string;
+  category: string;
+  quantity_needed: string;
+  quantity_multiplier?: number | null;
+  source_ids: string[];
+  supplier_candidates: SupplierCandidate[];
+  notes: string[];
+  budget_status?:
+    | "included"
+    | "missing_price"
+    | "missing_quantity"
+    | "missing_price_and_quantity";
+  item_cost_range?: MoneyRange;
+};
+
+export type BudgetSummary = {
+  estimated_total_range: MoneyRange;
+  subtotal_range: MoneyRange;
+  priced_items: number;
+  total_items: number;
+  missing_prices: number;
+  excluded_due_to_missing_quantity: number;
+  confidence: "low" | "medium" | "high";
+  notes: string[];
+};
+
+export type BudgetBreakdownItem = {
+  category: string;
+  label: string;
+  min: number;
+  max: number;
+  currency: string;
+  items_count: number;
+  excluded_count: number;
+};
+
+export type TimelineTask = {
+  task_name: string;
+  phase: string;
+  hands_on_hours: number;
+  effective_hands_on_hours: number;
+  passive_wait_hours: number;
+  dependencies: string[];
+  assigned_people: number;
+  parallelizable: boolean;
+  scheduled_start: string;
+  scheduled_end: string;
+  hands_on_start: string;
+  hands_on_end: string;
+  passive_wait_end?: string | null;
+};
+
+export type OperationalPlanResponse = {
+  session_id: string;
+  version_id: string;
+  supply_chain_items: SupplyChainItem[];
+  budget_summary: BudgetSummary;
+  budget_breakdown: BudgetBreakdownItem[];
+  timeline: TimelineTask[];
+  assumptions: string[];
+  warnings: string[];
+};
+
+export type OperationalPlanRequest = {
+  version_id?: string | null;
+  team_size?: number;
+  start_date?: string | null;
+  workday_start?: string;
+  workday_end?: string;
+  hours_per_day?: number;
+  workdays?: string[];
+  skip_weekends?: boolean;
+  include_us_holidays?: boolean;
+  procurement_lead_days?: number | null;
 };
