@@ -24,7 +24,7 @@ export function QueryInput({
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-normal text-slate-950">
-            AI Scientist Lite
+            Protheus
           </h1>
         </div>
 

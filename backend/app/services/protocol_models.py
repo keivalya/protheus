@@ -64,7 +64,7 @@ class ProtocolSection(BaseModel):
             return []
 
         normalized: list[dict[str, Any]] = []
-        for phase in value:
+        for phase_index, phase in enumerate(value, start=1):
             if not isinstance(phase, dict):
                 continue
             phase_name = phase.get("phase_name") or phase.get("title") or phase.get("name")

@@ -246,12 +246,12 @@ def search_papers(search_queries: list[str], limit: int = 5) -> list[dict[str, A
                 title = _normalize_title(paper.get("title"))
                 if title.startswith("faculty opinions recommendation of"):
                     continue
-                dedupe_key = paper.get("doi") or title
-                if not dedupe_key or dedupe_key in seen or title in seen_titles:
+                dedupe_key = paper.get("doi") or _normalize_title(paper.get("title"))
+                title_key = _normalize_title(paper.get("title"))
+                if not dedupe_key or dedupe_key in seen or title_key in seen_titles:
                     continue
                 seen.add(dedupe_key)
-                if title:
-                    seen_titles.add(title)
+                if title_key:
+                    seen_titles.add(title_key)
                 papers.append(paper)
     return papers
-

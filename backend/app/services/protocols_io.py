@@ -207,20 +207,8 @@ def _known_protocol_matches(search_queries: list[str]) -> list[dict[str, Any]]:
         "cortical and striatal",
         "forebrain spheroid",
     ]
-    tfeb_markers = [
-        "tfeb",
-        "hepg2",
-        "lipid droplet",
-        "bodipy",
-        "cas9 rnp",
-        "clonal expansion",
-    ]
-    crc_markers = [
-        "colorectal cancer",
-        "patient-derived organoid",
-        "celltiter-glo 3d",
-        "organoid drug treatment",
-    ]
+    tfeb_markers = ["tfeb", "hepg2", "lipid droplet", "bodipy", "cas9 rnp", "clonal expansion"]
+    crc_markers = ["colorectal cancer", "patient-derived organoid", "celltiter-glo 3d", "organoid drug treatment"]
     concept_terms = [
         "assembloid",
         "assembloids",
@@ -238,23 +226,28 @@ def _known_protocol_matches(search_queries: list[str]) -> list[dict[str, Any]]:
         "hipsc",
         "ipsc",
     ]
-    assembloid_ids = {"protocols.io:36wgq4xxkvk5"}
-    tfeb_ids = {
-        "protocols.io:uibeuan",
-        "protocols.io:frjbm4n",
-        "protocols.io:srqed5w",
-        "protocols.io:q26g74xqqgwz",
-    }
-    crc_ids = {"protocols.io:d6wq9fdw", "protocols.io:x54v92rb1l3e"}
-
     if any(marker in query_text for marker in strong_markers):
-        return [dict(p) for p in KNOWN_PROTOCOLS if p["id"] in assembloid_ids]
+        return [dict(protocol) for protocol in KNOWN_PROTOCOLS if protocol["id"] == "protocols.io:36wgq4xxkvk5"]
     if "assembloid" in query_text and sum(1 for term in concept_terms if term in query_text) >= 4:
-        return [dict(p) for p in KNOWN_PROTOCOLS if p["id"] in assembloid_ids]
+        return [dict(protocol) for protocol in KNOWN_PROTOCOLS if protocol["id"] == "protocols.io:36wgq4xxkvk5"]
     if sum(1 for marker in tfeb_markers if marker in query_text) >= 2:
-        return [dict(p) for p in KNOWN_PROTOCOLS if p["id"] in tfeb_ids]
+        return [
+            dict(protocol)
+            for protocol in KNOWN_PROTOCOLS
+            if protocol["id"]
+            in {
+                "protocols.io:uibeuan",
+                "protocols.io:frjbm4n",
+                "protocols.io:srqed5w",
+                "protocols.io:q26g74xqqgwz",
+            }
+        ]
     if sum(1 for marker in crc_markers if marker in query_text) >= 2:
-        return [dict(p) for p in KNOWN_PROTOCOLS if p["id"] in crc_ids]
+        return [
+            dict(protocol)
+            for protocol in KNOWN_PROTOCOLS
+            if protocol["id"] in {"protocols.io:d6wq9fdw", "protocols.io:x54v92rb1l3e"}
+        ]
     return []
 
 
