@@ -605,11 +605,22 @@ table.materials .m-cost { font-family: "IBM Plex Mono", monospace; font-size: 13
 .spacer { flex: 1; }
 .empty { color: var(--muted); margin: 0; }
 
-/* Off-screen PDF document captured by html2pdf — rendered always but hidden from view */
-.pdf-doc {
-  position: absolute;
-  left: -10000px;
+/* Off-screen PDF document captured by html2pdf.
+ * The shell is fixed and zero-sized so it does not extend the document
+ * scroll area; the inner doc is laid out at full A4 width and natural
+ * height, which html2canvas captures end-to-end. */
+.pdf-shell {
+  position: fixed;
   top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+.pdf-doc {
   width: 794px; /* ~A4 portrait at 96 DPI */
   background: #ffffff;
   padding: 32px 36px 40px;

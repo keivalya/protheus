@@ -496,8 +496,9 @@ export default function FullPlan({ plan }: { plan: Plan }) {
       </div>
 
       {/* Off-screen PDF document — html2pdf renders this into a downloadable PDF */}
-      <div className="pdf-doc" ref={pdfRef} aria-hidden="true">
-        <div className="pdf-hero pdf-avoid-break">
+      <div className="pdf-shell" aria-hidden="true">
+        <div className="pdf-doc" ref={pdfRef}>
+          <div className="pdf-hero pdf-avoid-break">
           <div className="pdf-eyebrow">Plan ready · {generated}</div>
           <h1 className="pdf-title">
             <SciText html={plan.title} />
@@ -548,17 +549,14 @@ export default function FullPlan({ plan }: { plan: Plan }) {
           <h3 className="pdf-h">Validation</h3>
           <ValidationPanel plan={plan} />
         </div>
-        <div className="pdf-section pdf-avoid-break">
-          <h3 className="pdf-h">Funding</h3>
-          <FundingPanel plan={plan} />
+          <div className="pdf-section pdf-avoid-break">
+            <h3 className="pdf-h">Funding</h3>
+            <FundingPanel plan={plan} />
+          </div>
         </div>
       </div>
 
       <div className="plan-actions">
-        <div className="meta">
-          <span className="dot" />
-          <span>Auto-saved · v1</span>
-        </div>
         <span className="spacer" />
         <button
           className="btn ghost"
