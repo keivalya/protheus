@@ -145,16 +145,38 @@ function noveltyCaption(signal: NoveltySignal) {
   }
 }
 
+function balanceParenItems(items: string[]): string[] {
+  // Backend item parsing sometimes splits inside parentheses, producing
+  // fragments like "(Corning, cat", "no", "354277) DMEM/F12 medium ...".
+  // Re-stitch fragments until '(' and ')' counts balance.
+  const out: string[] = [];
+  let buffer = "";
+  let depth = 0;
+  for (const raw of items) {
+    const item = raw.trim();
+    if (!item) continue;
+    buffer = buffer ? `${buffer}, ${item}` : item;
+    depth += (item.match(/\(/g) || []).length - (item.match(/\)/g) || []).length;
+    if (depth <= 0) {
+      out.push(buffer);
+      buffer = "";
+      depth = 0;
+    }
+  }
+  if (buffer) out.push(buffer);
+  return out;
+}
+
 function sectionBody(section: ProtocolSection) {
   if (section.phases?.length) {
-    return section.phases
-      .flatMap((phase) =>
-        phase.steps.map((step) => `${step.step_number}. ${step.action}`),
-      )
-      .join("\n");
+    const steps = section.phases
+      .flatMap((phase) => phase.steps)
+      .slice()
+      .sort((a, b) => (a.step_number ?? 0) - (b.step_number ?? 0));
+    return steps.map((step) => `${step.step_number}. ${step.action}`).join("\n");
   }
   if (section.items?.length) {
-    return section.items.map((item) => item.name).join("\n");
+    return balanceParenItems(section.items.map((item) => item.name)).join("\n");
   }
   return section.content;
 }
