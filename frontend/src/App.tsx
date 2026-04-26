@@ -223,10 +223,6 @@ function HeroHeadline() {
     return () => window.clearTimeout(timer);
   }, [charIndex, deleting, lineIndex, paused]);
 
-  useEffect(() => {
-    setCharIndex(0);
-  }, [lineIndex]);
-
   const line = heroLines[lineIndex];
   const complete = charIndex >= line.a.length + line.b.length;
   const first = line.a.slice(0, Math.min(charIndex, line.a.length));
