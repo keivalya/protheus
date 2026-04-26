@@ -30,6 +30,59 @@ NORMALIZATION_PATTERNS = [
 
 BIOMEDICAL_CONCEPTS = [
     {
+        "canonical": "TFEB HepG2 lipid droplet CRISPR knockout",
+        "aliases": [
+            "TFEB HepG2 lipid droplets",
+            "CRISPR knockout of TFEB in HepG2",
+            "HepG2 lipid droplet BODIPY",
+            "TFEB lipophagy HepG2",
+            "fatty acid loading lipid droplets HepG2",
+            "Cas9 RNP adherent cells",
+        ],
+        "protocol_queries": [
+            "CRISPR Editing of Immortalized Cells with RNPs using Lipofection",
+            "Transfection of Cas9 RNP into adherent cells using Lipofectamine RNAiMAX",
+            "Limiting Dilution Clonal Expansion",
+            "Lipid droplet visualisation in cultured cells using BODIPY 493/503 stain",
+            "HepG2 lipid droplet BODIPY protocol",
+            "TFEB CRISPR knockout HepG2 lipid droplet protocol",
+        ],
+        "paper_queries": [
+            "Liraglutide Alleviates Hepatic Steatosis by Activating the TFEB-Regulated Autophagy-Lysosomal Pathway",
+            "TFEB HepG2 lipid droplets siRNA lipophagy",
+            "TFEB activator clomiphene citrate lipophagy lipolysis",
+            "Hepatic lipophagy autophagic catabolism lipid droplets liver",
+            "CRISPR-Cas9 knockout human hepatocytes lipid droplet accumulation",
+        ],
+    },
+    {
+        "canonical": "patient-derived colorectal cancer organoid drug screen",
+        "aliases": [
+            "established colorectal cancer organoids from patient biopsies drug screen",
+            "colorectal cancer organoids from patient biopsies drug screen",
+            "established colorectal cancer organoids patient biopsies",
+            "colorectal cancer organoids patient biopsies drug screen",
+            "patient-derived CRC organoids drug screening",
+            "patient-derived tumor organoids metastatic colorectal cancer",
+            "colorectal cancer patient-derived organoid generation workflow",
+            "CellTiter-Glo 3D organoid drug treatment",
+        ],
+        "protocol_queries": [
+            "Cell Viability Protocol using CellTiter-Glo 3D",
+            "Organoid Drug Treatment",
+            "Drug Sensitivity Assays of Human Cancer Organoid Cultures",
+            "patient-derived colorectal cancer organoid drug screening protocol",
+            "colorectal cancer organoids patient biopsies drug screen",
+        ],
+        "paper_queries": [
+            "Modeling colorectal cancer: A bio-resource of 50 patient-derived organoid lines",
+            "Establishment of patient-derived tumor organoids to functionally inform treatment decisions in metastatic colorectal cancer",
+            "Standardizing Patient-Derived Organoid Generation Workflow to Avoid Microbial Contamination From Colorectal Cancer Tissues",
+            "The Efficacy of Using Patient-Derived Organoids to Predict Treatment Response in Colorectal Cancer",
+            "Long-term expansion of epithelial organoids from human colon adenoma adenocarcinoma Barrett's epithelium",
+        ],
+    },
+    {
         "canonical": "iPSC neuron differentiation",
         "aliases": [
             "derive neurons from iPSC",
@@ -232,21 +285,67 @@ def _matched_concepts(query: str, structured_hypothesis: dict[str, Any]) -> list
     ]
     haystack = " ".join(str(part) for part in haystack_parts if part)
     haystack_lower = haystack.lower()
+    haystack_tokens = {
+        token
+        for token in re.findall(r"[a-zA-Z0-9/-]+", haystack_lower)
+        if len(token) > 2
+        and token
+        not in {
+            "anyone",
+            "done",
+            "looked",
+            "cells",
+            "cell",
+            "protocol",
+            "protocols",
+            "using",
+            "from",
+            "with",
+            "and",
+            "the",
+        }
+    }
 
     matched: list[dict[str, Any]] = []
     for concept in BIOMEDICAL_CONCEPTS:
         aliases = [concept["canonical"], *concept["aliases"]]
+        canonical = concept["canonical"]
+        required_concept_match = False
+        if canonical == "patient-derived colorectal cancer organoid drug screen":
+            required_concept_match = {"colorectal", "cancer", "organoid"} <= haystack_tokens and bool(
+                {"drug", "screen", "screening"} & haystack_tokens
+            )
+        if canonical == "TFEB HepG2 lipid droplet CRISPR knockout":
+            required_concept_match = {"tfeb", "hepg2"} <= haystack_tokens and bool(
+                {"lipid", "droplets", "droplet"} & haystack_tokens
+            )
         substring_match = any(alias.lower() in haystack_lower for alias in aliases)
         fuzzy_match = False
         if process and fuzz and utils:
-            match = process.extractOne(
-                haystack,
-                aliases,
-                scorer=fuzz.WRatio,
-                processor=utils.default_process,
-            )
-            fuzzy_match = bool(match and match[1] >= 78)
-        if substring_match or fuzzy_match:
+            relevant_aliases = [
+                alias
+                for alias in aliases
+                if len(
+                    {
+                        token
+                        for token in re.findall(r"[a-zA-Z0-9/-]+", alias.lower())
+                        if len(token) > 2
+                    }
+                    & haystack_tokens
+                )
+                >= 2
+            ]
+            if not relevant_aliases and not substring_match:
+                continue
+            if relevant_aliases:
+                match = process.extractOne(
+                    haystack,
+                    relevant_aliases,
+                    scorer=fuzz.WRatio,
+                    processor=utils.default_process,
+                )
+                fuzzy_match = bool(match and match[1] >= 82)
+        if substring_match or fuzzy_match or required_concept_match:
             matched.append(concept)
     return matched
 
