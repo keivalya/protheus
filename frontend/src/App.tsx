@@ -391,16 +391,30 @@ function NoveltyReview({
 function ProtocolCard({
   protocol,
   selected,
-  onSelect,
+  onToggle,
   isBusy,
 }: {
   protocol: Protocol;
   selected: boolean;
-  onSelect: () => void;
+  onToggle: () => void;
   isBusy: boolean;
 }) {
   return (
-    <article className={`candidate ${selected ? "is-selected" : ""}`}>
+    <article
+      className={`candidate ${selected ? "is-selected" : ""} ${isBusy ? "is-disabled" : ""}`}
+      onClick={() => {
+        if (!isBusy) onToggle();
+      }}
+    >
+      <div className="cand-check" aria-hidden="true">
+        <input
+          type="checkbox"
+          checked={selected}
+          disabled={isBusy}
+          onChange={onToggle}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
       <div className="cand-main">
         <div className="cand-head">
           <span className="source-badge">{protocol.source}</span>
@@ -414,13 +428,17 @@ function ProtocolCard({
       </div>
       <div className="cand-actions">
         {protocol.url ? (
-          <a className="cand-link" href={protocol.url} target="_blank" rel="noreferrer" aria-label="Open source">
+          <a
+            className="cand-link"
+            href={protocol.url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open source"
+            onClick={(e) => e.stopPropagation()}
+          >
             ↗
           </a>
         ) : null}
-        <button className="cand-btn" type="button" onClick={onSelect} disabled={isBusy}>
-          {selected ? "Selected" : "Use this"}
-        </button>
       </div>
     </article>
   );
@@ -428,23 +446,28 @@ function ProtocolCard({
 
 function ProtocolPicker({
   result,
-  selectedProtocol,
-  onSelect,
+  selectedIds,
+  onToggle,
+  onConfirm,
   onBack,
   isBusy,
 }: {
   result: LiteratureQCResponse;
-  selectedProtocol: Protocol | null;
-  onSelect: (p: Protocol) => void;
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
+  onConfirm: () => void;
   onBack: () => void;
   isBusy: boolean;
 }) {
+  const selectedCount = selectedIds.size;
   return (
     <section className="card">
       <div className="card-head card-head-row">
         <div>
-          <h3 className="card-title">Pick a base protocol</h3>
-          <div className="card-sub">Pick the closest source. The draft stays linked to it.</div>
+          <h3 className="card-title">Pick base protocols</h3>
+          <div className="card-sub">
+            Select one or more sources. The draft will be grounded in every protocol you check.
+          </div>
         </div>
         <button className="link-btn" type="button" onClick={onBack}>
           ← Back to sources
@@ -456,8 +479,8 @@ function ProtocolPicker({
             <ProtocolCard
               key={protocol.id}
               protocol={protocol}
-              selected={selectedProtocol?.id === protocol.id}
-              onSelect={() => onSelect(protocol)}
+              selected={selectedIds.has(protocol.id)}
+              onToggle={() => onToggle(protocol.id)}
               isBusy={isBusy}
             />
           ))
@@ -471,6 +494,25 @@ function ProtocolPicker({
           </div>
         )}
       </div>
+      {result.protocols.length ? (
+        <div className="picker-footer">
+          <span className="picker-count">
+            {selectedCount === 0
+              ? "No protocols selected"
+              : `${selectedCount} protocol${selectedCount === 1 ? "" : "s"} selected`}
+          </span>
+          <span className="spacer" />
+          <button
+            className="btn primary"
+            type="button"
+            onClick={onConfirm}
+            disabled={isBusy || selectedCount === 0}
+          >
+            Generate draft from {selectedCount || ""} protocol{selectedCount === 1 ? "" : "s"}
+            <span aria-hidden="true"> →</span>
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -554,7 +596,8 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<LiteratureQCResponse | null>(null);
   const [pickStage, setPickStage] = useState<PickStage>("novelty");
-  const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null);
+  const [selectedProtocolIds, setSelectedProtocolIds] = useState<Set<string>>(() => new Set());
+  const [selectedProtocols, setSelectedProtocols] = useState<Protocol[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeVersion, setActiveVersion] = useState<ProtocolVersion | null>(null);
   const [accepted, setAccepted] = useState(false);
@@ -585,7 +628,8 @@ export default function App() {
 
     setIsBusy(true);
     setResult(null);
-    setSelectedProtocol(null);
+    setSelectedProtocolIds(new Set());
+    setSelectedProtocols([]);
     setActiveVersion(null);
     setSessionId(null);
     setAccepted(false);
@@ -613,13 +657,28 @@ export default function App() {
     }
   }
 
-  async function handleGenerate(protocol: Protocol) {
+  function toggleProtocol(id: string) {
+    if (!result) return;
+    setSelectedProtocolIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleGenerate() {
     if (!result || isBusy) return;
+    const picked = result.protocols.filter((p) => selectedProtocolIds.has(p.id));
+    if (!picked.length) return;
     setIsBusy(true);
     setError(null);
-    setSelectedProtocol(protocol);
+    setSelectedProtocols(picked);
     setLoading({
-      title: "Adapting the protocol to your question…",
+      title:
+        picked.length === 1
+          ? "Adapting the protocol to your question…"
+          : `Combining ${picked.length} protocols into a unified draft…`,
       subs: [
         "Customizing steps with your sample & question parameters",
         "Cross-referencing materials & equipment",
@@ -636,7 +695,7 @@ export default function App() {
             original_query: result.query,
             structured_hypothesis: result.structured_hypothesis,
             selected_papers: result.papers,
-            selected_protocols: [protocol],
+            selected_protocols: picked,
           })
         ).session_id;
       setSessionId(session);
@@ -685,9 +744,10 @@ export default function App() {
       const baseBuilt = buildPlanFromContext({
         question: result?.query || query,
         draftTitle: activeVersion.protocol.title,
-        basedOn: selectedProtocol
-          ? (result?.papers.find((p) => p.title) ?? null)
-          : null,
+        basedOn:
+          selectedProtocols.length > 0
+            ? (result?.papers.find((p) => p.title) ?? null)
+            : null,
       });
       setPlan(opPlan ? mergeOperationalPlan(baseBuilt, opPlan) : baseBuilt);
       setAccepted(true);
@@ -701,7 +761,8 @@ export default function App() {
 
   function reset() {
     setResult(null);
-    setSelectedProtocol(null);
+    setSelectedProtocolIds(new Set());
+    setSelectedProtocols([]);
     setActiveVersion(null);
     setSessionId(null);
     setAccepted(false);
@@ -773,8 +834,9 @@ export default function App() {
               ) : (
                 <ProtocolPicker
                   result={result}
-                  selectedProtocol={selectedProtocol}
-                  onSelect={handleGenerate}
+                  selectedIds={selectedProtocolIds}
+                  onToggle={toggleProtocol}
+                  onConfirm={handleGenerate}
                   onBack={() => setPickStage("novelty")}
                   isBusy={isBusy}
                 />

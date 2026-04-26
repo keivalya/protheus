@@ -344,14 +344,31 @@ a:hover { text-decoration: underline; }
 .candidates { display: grid; gap: 10px; }
 .candidate {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 16px;
   padding: 16px 18px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface);
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
 }
-.candidate.is-selected { border-color: var(--accent); border-width: 2px; padding: 15px 17px; }
+.candidate:hover { border-color: var(--ink-2); }
+.candidate.is-selected {
+  border-color: var(--accent);
+  border-width: 2px;
+  padding: 15px 17px;
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.candidate.is-disabled { opacity: .65; cursor: progress; }
+.cand-check { display: flex; align-items: flex-start; padding-top: 2px; }
+.cand-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
 .cand-main { min-width: 0; }
 .cand-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .source-badge { font-size: 12px; padding: 2px 7px; border-radius: 4px; background: var(--bg-tint); color: var(--muted); }
@@ -384,6 +401,21 @@ a:hover { text-decoration: underline; }
   padding: 12px 18px;
 }
 .cand-btn:disabled, .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Picker footer (Generate-from-N CTA) */
+.picker-footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px 22px;
+  border-top: 1px solid var(--line-soft);
+}
+.picker-count {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
 
 .link-btn {
   background: transparent;
@@ -777,8 +809,8 @@ body.is-pdf-export { cursor: progress; }
   .ask-form { width: 100%; }
   .ask-input { font-size: 17px; padding-left: 18px; }
   .plan-stats { grid-template-columns: repeat(2, 1fr); }
-  .candidate { grid-template-columns: 1fr; }
-  .cand-actions { justify-content: flex-start; }
+  .candidate { grid-template-columns: auto 1fr; }
+  .candidate .cand-actions { grid-column: 1 / -1; justify-content: flex-start; }
   .step-nav { grid-template-columns: repeat(5, auto); overflow-x: auto; }
   .step-label { display: none; }
   .step.is-active .step-label, .step.is-done .step-label { display: inline; }
