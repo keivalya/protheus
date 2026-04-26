@@ -447,8 +447,16 @@ a:hover { text-decoration: underline; }
 .tab-panel { display: none; padding-top: 28px; }
 .tab-panel.is-active { display: block; animation: fade .35s ease both; }
 
-/* Protocol panel */
+/* Protocol panel (Full Plan) */
 .protocol-panel { display: grid; gap: 12px; }
+
+/* Protocol sections (Review & iterate) — slightly larger type, more breathing room */
+.protocol-sections { display: grid; gap: 20px; }
+.protocol-sections .protocol-step { padding: 22px 26px; }
+.protocol-sections .step-title { font-size: 22px; line-height: 1.25; }
+.protocol-sections .step-body { font-size: 16px; line-height: 1.65; }
+.protocol-sections .step-body p { margin: 0 0 12px; }
+.protocol-sections .step-meta { font-size: 12px; }
 .protocol-step {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -597,9 +605,84 @@ table.materials .m-cost { font-family: "IBM Plex Mono", monospace; font-size: 13
 .spacer { flex: 1; }
 .empty { color: var(--muted); margin: 0; }
 
-/* Print-only blocks shown when exporting */
-.print-only { display: none; }
-.print-section { display: none; }
+/* Off-screen PDF document captured by html2pdf — rendered always but hidden from view */
+.pdf-doc {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 794px; /* ~A4 portrait at 96 DPI */
+  background: #ffffff;
+  padding: 32px 36px 40px;
+  color: var(--ink);
+  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+}
+.pdf-doc .pdf-hero { padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+.pdf-doc .pdf-eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.pdf-doc .pdf-title {
+  font-family: "Fraunces", serif;
+  font-weight: 360;
+  font-size: 28px;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+.pdf-doc .pdf-blurb { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; line-height: 1.5; }
+.pdf-doc .pdf-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.pdf-doc .pdf-stats .k {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.pdf-doc .pdf-stats .v {
+  font-family: "Fraunces", serif;
+  font-size: 18px;
+  color: var(--ink);
+}
+.pdf-doc .pdf-section { margin-top: 24px; }
+.pdf-doc .pdf-h {
+  font-family: "Fraunces", serif;
+  font-size: 20px;
+  font-weight: 450;
+  color: var(--ink);
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+/* Make grids stack better in the narrower PDF page */
+.pdf-doc .deps-grid,
+.pdf-doc .val-grid { grid-template-columns: 1fr 1fr; }
+.pdf-doc .budget-grid { grid-template-columns: 1.2fr 1fr; }
+.pdf-doc .milestones { grid-template-columns: 1fr; }
+.pdf-doc .fund-card { grid-template-columns: 1fr auto; }
+.pdf-doc .gantt { padding: 14px 16px; }
+.pdf-doc .gantt-grid { min-width: 0; }
+.pdf-doc .gantt-head,
+.pdf-doc .gantt-row { grid-template-columns: 160px repeat(var(--weeks, 10), 1fr); }
+.pdf-doc .gantt-row::after { left: 160px; }
+.pdf-doc .protocol-step { box-shadow: none; }
+.pdf-doc .table-wrap { overflow: hidden; }
+.pdf-doc table.materials { min-width: 0; font-size: 11.5px; }
+.pdf-doc table.materials th,
+.pdf-doc table.materials td { padding: 8px 10px; }
+
+body.is-pdf-export { cursor: progress; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }

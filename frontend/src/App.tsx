@@ -487,7 +487,6 @@ function ProtocolDraft({
             <article className="protocol-step" key={key}>
               <header>
                 <div className="step-title">{section.title}</div>
-                <div className="step-time">{Math.round(section.confidence * 100)}%</div>
               </header>
               <div className="step-body">
                 {sectionBody(section)

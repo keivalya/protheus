@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   fmtGenerated,
   fmtNumber,
@@ -40,20 +40,31 @@ function SciText({ html }: { html: string }) {
   return <span dangerouslySetInnerHTML={{ __html: safe }} />;
 }
 
-function exportToPdf(planTitle: string) {
-  const previousTitle = document.title;
+async function exportToPdf(node: HTMLElement, planTitle: string) {
   const slug =
     planTitle
       .replace(/[^a-z0-9]+/gi, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 60) || "protocol-plan";
-  document.title = `Protheus-${slug}`;
-  document.body.classList.add("is-printing");
-  window.print();
-  window.setTimeout(() => {
-    document.title = previousTitle;
-    document.body.classList.remove("is-printing");
-  }, 300);
+  document.body.classList.add("is-pdf-export");
+  try {
+    const mod = await import("html2pdf.js");
+    const html2pdf = mod.default as unknown as () => {
+      from: (el: HTMLElement) => {
+        set: (opts: object) => { save: () => Promise<void> };
+      };
+    };
+    const opts = {
+      margin: [12, 12, 16, 12],
+      filename: `Protheus-${slug}.pdf`,
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-avoid-break"] },
+    };
+    await html2pdf().from(node).set(opts).save();
+  } finally {
+    document.body.classList.remove("is-pdf-export");
+  }
 }
 
 function ProtocolPanel({ plan }: { plan: Plan }) {
@@ -384,12 +395,24 @@ function FundingPanel({ plan }: { plan: Plan }) {
 
 export default function FullPlan({ plan }: { plan: Plan }) {
   const [tab, setTab] = useState<TabId>("protocol");
+  const [exporting, setExporting] = useState(false);
+  const pdfRef = useRef<HTMLDivElement>(null);
   const generated = useMemo(() => fmtGenerated(), []);
   const sym = plan.stats.currencySymbol;
   const suppliers = useMemo(
     () => new Set(plan.materials.map((m) => m.supplier)).size,
     [plan.materials],
   );
+
+  async function handleExport() {
+    if (!pdfRef.current || exporting) return;
+    setExporting(true);
+    try {
+      await exportToPdf(pdfRef.current, plan.title);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <section className="plan is-visible">
@@ -472,22 +495,63 @@ export default function FullPlan({ plan }: { plan: Plan }) {
         {tab === "funding" ? <FundingPanel plan={plan} /> : null}
       </div>
 
-      {/* Print-only: render every panel so all tabs land in the PDF */}
-      <div className="print-only">
-        <h3 className="print-section">Protocol</h3>
-        <ProtocolPanel plan={plan} />
-        <h3 className="print-section">Materials</h3>
-        <MaterialsPanel plan={plan} />
-        <h3 className="print-section">Budget</h3>
-        <BudgetPanel plan={plan} />
-        <h3 className="print-section">Timeline</h3>
-        <TimelinePanel plan={plan} />
-        <h3 className="print-section">Dependencies</h3>
-        <DependenciesPanel plan={plan} />
-        <h3 className="print-section">Validation</h3>
-        <ValidationPanel plan={plan} />
-        <h3 className="print-section">Funding</h3>
-        <FundingPanel plan={plan} />
+      {/* Off-screen PDF document — html2pdf renders this into a downloadable PDF */}
+      <div className="pdf-doc" ref={pdfRef} aria-hidden="true">
+        <div className="pdf-hero pdf-avoid-break">
+          <div className="pdf-eyebrow">Plan ready · {generated}</div>
+          <h1 className="pdf-title">
+            <SciText html={plan.title} />
+          </h1>
+          <p className="pdf-blurb">
+            <SciText html={plan.summary} />
+          </p>
+          <div className="pdf-stats">
+            <div>
+              <div className="k">Budget</div>
+              <div className="v">{sym}{fmtNumber(plan.stats.budgetTotal)}</div>
+            </div>
+            <div>
+              <div className="k">Duration</div>
+              <div className="v">{plan.stats.durationWeeks} weeks</div>
+            </div>
+            <div>
+              <div className="k">Materials</div>
+              <div className="v">{plan.stats.materialsCount} SKUs</div>
+            </div>
+            <div>
+              <div className="k">Confidence</div>
+              <div className="v">{plan.stats.confidence}</div>
+            </div>
+          </div>
+        </div>
+        <div className="pdf-section pdf-avoid-break">
+          <h3 className="pdf-h">Protocol</h3>
+          <ProtocolPanel plan={plan} />
+        </div>
+        <div className="pdf-section pdf-avoid-break">
+          <h3 className="pdf-h">Materials</h3>
+          <MaterialsPanel plan={plan} />
+        </div>
+        <div className="pdf-section pdf-avoid-break">
+          <h3 className="pdf-h">Budget</h3>
+          <BudgetPanel plan={plan} />
+        </div>
+        <div className="pdf-section pdf-avoid-break">
+          <h3 className="pdf-h">Timeline</h3>
+          <TimelinePanel plan={plan} />
+        </div>
+        <div className="pdf-section pdf-avoid-break">
+          <h3 className="pdf-h">Dependencies</h3>
+          <DependenciesPanel plan={plan} />
+        </div>
+        <div className="pdf-section pdf-avoid-break">
+          <h3 className="pdf-h">Validation</h3>
+          <ValidationPanel plan={plan} />
+        </div>
+        <div className="pdf-section pdf-avoid-break">
+          <h3 className="pdf-h">Funding</h3>
+          <FundingPanel plan={plan} />
+        </div>
       </div>
 
       <div className="plan-actions">
@@ -499,9 +563,10 @@ export default function FullPlan({ plan }: { plan: Plan }) {
         <button
           className="btn ghost"
           type="button"
-          onClick={() => exportToPdf(plan.title)}
+          onClick={handleExport}
+          disabled={exporting}
         >
-          Export to PDF
+          {exporting ? "Preparing PDF…" : "Export to PDF"}
         </button>
       </div>
     </section>
