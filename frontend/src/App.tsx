@@ -80,11 +80,6 @@ function shortText(value = "", max = 140) {
   return clean.length > max ? `${clean.slice(0, max - 1).trim()}…` : clean;
 }
 
-function scoreLabel(score?: number) {
-  if (typeof score !== "number") return "match";
-  return `${Math.round(score)}%`;
-}
-
 function shortDoi(doi?: string | null) {
   if (!doi) return null;
   return doi.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, "");
@@ -217,6 +212,39 @@ function HeroHeadline() {
   );
 }
 
+function LoadingBlock({
+  title,
+  subs,
+  intervalMs = 700,
+}: {
+  title: string;
+  subs: string[];
+  intervalMs?: number;
+}) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    setIndex(0);
+    if (subs.length <= 1) return;
+    const id = window.setInterval(() => {
+      setIndex((current) => (current + 1) % subs.length);
+    }, intervalMs);
+    return () => window.clearInterval(id);
+  }, [subs, intervalMs]);
+
+  return (
+    <section className="card loading-card">
+      <div className="loading-block">
+        <div className="spin" aria-hidden="true" />
+        <div className="loading-text">
+          {title}
+          <small aria-live="polite">{subs[index] ?? ""}</small>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function StepNav({ step }: { step: number }) {
   return (
     <nav className="step-nav" aria-label="Progress">
@@ -341,7 +369,6 @@ function ProtocolCard({
       <div className="cand-main">
         <div className="cand-head">
           <span className="source-badge">{protocol.source}</span>
-          <span className="cand-meta">{scoreLabel(protocol.match_score)}</span>
         </div>
         <h4 className="cand-title">
           <SciTitle html={protocol.title} />
@@ -502,7 +529,11 @@ export default function App() {
   const [activeVersion, setActiveVersion] = useState<ProtocolVersion | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState<{
+    title: string;
+    subs: string[];
+    intervalMs?: number;
+  } | null>(null);
   const [isBusy, setIsBusy] = useState(false);
 
   const isWorking = Boolean(result || isBusy || error);
@@ -528,16 +559,24 @@ export default function App() {
     setAccepted(false);
     setPickStage("novelty");
     setError(null);
-    setStatus("Searching sources");
+    setLoading({
+      title: "Searching literature for prior art…",
+      subs: [
+        "PubMed · Crossref · arXiv",
+        "Fetching source metadata…",
+        "Normalizing DOI resolver links…",
+        "Deduplicating evidence records…",
+      ],
+      intervalMs: 700,
+    });
 
     try {
       const response = await runLiteratureQC(trimmed);
       setResult(response);
-      setStatus(null);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Search failed.");
-      setStatus(null);
     } finally {
+      setLoading(null);
       setIsBusy(false);
     }
   }
@@ -547,7 +586,15 @@ export default function App() {
     setIsBusy(true);
     setError(null);
     setSelectedProtocol(protocol);
-    setStatus("Drafting protocol");
+    setLoading({
+      title: "Adapting the protocol to your question…",
+      subs: [
+        "Customizing steps with your sample & question parameters",
+        "Cross-referencing materials & equipment",
+        "Calibrating step-by-step instructions",
+      ],
+      intervalMs: 750,
+    });
 
     try {
       const session =
@@ -563,11 +610,10 @@ export default function App() {
       setSessionId(session);
       const draft = await generateProtocolDraft(session);
       setActiveVersion(draft.version);
-      setStatus(null);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Protocol generation failed.");
-      setStatus(null);
     } finally {
+      setLoading(null);
       setIsBusy(false);
     }
   }
@@ -576,15 +622,21 @@ export default function App() {
     if (!sessionId || !activeVersion || isBusy) return;
     setIsBusy(true);
     setError(null);
-    setStatus("Approving protocol");
+    setLoading({
+      title: "Approving protocol…",
+      subs: [
+        "Saving feedback memories for future drafts",
+        "Indexing protocol provenance…",
+      ],
+      intervalMs: 750,
+    });
     try {
       await acceptProtocol(sessionId, activeVersion.id);
       setAccepted(true);
-      setStatus("Protocol approved");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Approval failed.");
-      setStatus(null);
     } finally {
+      setLoading(null);
       setIsBusy(false);
     }
   }
@@ -597,7 +649,7 @@ export default function App() {
     setAccepted(false);
     setPickStage("novelty");
     setError(null);
-    setStatus(null);
+    setLoading(null);
   }
 
   return (
@@ -642,7 +694,13 @@ export default function App() {
 
             <StepNav step={currentStep} />
 
-            {status ? <div className="card status-card">{status}</div> : null}
+            {loading ? (
+              <LoadingBlock
+                title={loading.title}
+                subs={loading.subs}
+                intervalMs={loading.intervalMs}
+              />
+            ) : null}
             {error ? <div className="card error-card">{error}</div> : null}
 
             {result && !activeVersion ? (
