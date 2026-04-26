@@ -176,7 +176,22 @@
   .qc-note { display: none; }
 
   .candidates { display: grid; gap: 10px; margin-top: 6px; }
-  .candidate { display: grid; grid-template-columns: 1fr auto; gap: 16px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); transition: border-color .18s; position: relative; }
+  .candidate { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); transition: border-color .18s; position: relative; cursor: pointer; }
+  .candidate:hover { border-color: var(--ink-2); }
+  .cand-check { display: flex; align-items: flex-start; padding-top: 2px; }
+  .cand-check input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; margin: 0; }
+  .picker-footer { display: flex; align-items: center; gap: 14px; padding: 16px 6px 4px; margin-top: 8px; border-top: 1px solid var(--line-soft); }
+  .picker-count { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0.04em; }
+  .picker-footer .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .op-banner { margin-top: 18px; padding: 14px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); }
+  .op-banner + .op-banner { margin-top: 10px; }
+  .op-banner-warn { background: var(--warning-soft); border-color: rgba(138,90,28,0.35); }
+  .op-banner-warn .op-banner-title { color: var(--warning); }
+  .op-banner-info { background: var(--bg-tint); border-color: var(--line); }
+  .op-banner-title { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 8px; }
+  .op-banner ul { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+  .op-banner li + li { margin-top: 4px; }
   .candidate:hover { border-color: var(--ink-2); background: var(--surface); }
   .candidate.is-selected { border-color: var(--accent); border-width: 2px; background: var(--surface); padding: 17px 19px; }
   .cand-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -429,6 +444,7 @@
     a { color: #111; text-decoration: none; }
   }
 </style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -437,43 +453,7 @@
     <img class="mark" src="logo.png" alt="" />
     <span class="name">Protheus</span>
   </div>
-  <nav>
-    <a href="#">Plans</a>
-    <a href="#">Library</a>
-    <a href="#">Suppliers</a>
-    <a href="#">Settings</a>
-  </nav>
-  <div class="top-right">
-    <button class="status-pill" id="status-pill" title="API status — click to configure">
-      <span class="pdot"></span>
-      <span id="status-pill-text">Sample mode</span>
-    </button>
-    <button class="gear-btn" id="gear-btn" title="Configure API key" aria-label="Settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    </button>
-  </div>
 </header>
-
-<div class="modal-backdrop" id="modal-backdrop">
-  <div class="modal" role="dialog" aria-modal="true">
-    <h3>OpenAI API key</h3>
-    <p class="modal-sub">Provide a valid key to generate fresh content with AI. Leave the dummy key in place to use the curated sample data instead.</p>
-    <label for="api-key-input">API key</label>
-    <input type="password" id="api-key-input" placeholder="sk-..." autocomplete="off" />
-    <div class="modal-help">
-      <strong>How it works:</strong> the key is kept only in this browser tab — not stored, not sent anywhere except <code>api.openai.com</code>. If the call fails, Protheus falls back to source-linked sample data.
-    </div>
-    <div class="modal-actions">
-      <span class="modal-status" id="modal-status"><span class="sdot"></span><span>Dummy key in use · sample data</span></span>
-      <span class="spacer"></span>
-      <button class="btn ghost" id="modal-close">Cancel</button>
-      <button class="btn primary" id="modal-save">Save key</button>
-    </div>
-  </div>
-</div>
 
 <main class="stage">
   <div class="hero-decor tl"><span>v0.5 · prototype</span>internal preview</div>
@@ -680,13 +660,13 @@
             <h4>Cost breakdown</h4>
             <div id="budget-rows"></div>
             <div style="margin-top:22px; padding-top:18px; border-top: 1px solid var(--line-soft); font-family: 'IBM Plex Mono', monospace; font-size:11.5px; color:var(--muted); display:flex; justify-content:space-between;">
-              <span id="budget-footer-l">Quoted prices · GBP · ex VAT</span>
+              <span id="budget-footer-l">Quoted prices · USD · ex VAT</span>
               <span style="color:var(--ink-2);" id="budget-footer-r">— line items</span>
             </div>
           </div>
           <div class="budget-summary">
             <h4>Total estimated cost</h4>
-            <div class="budget-total"><span class="currency" id="budget-currency">£</span><span id="budget-total-num">0</span></div>
+            <div class="budget-total"><span class="currency" id="budget-currency">$</span><span id="budget-total-num">0</span></div>
             <div class="budget-sub" id="budget-context"></div>
             <div class="budget-mini" id="budget-mini"></div>
           </div>
@@ -701,20 +681,24 @@
       <div class="tab-panel" id="panel-validation"><div class="val-grid" id="val-grid"></div></div>
       <div class="tab-panel" id="panel-funding">
         <div class="fund-intro">
-          <div class="fi-icon">£</div>
+          <div class="fi-icon">$</div>
           <div class="fi-text" id="fund-intro-text">Loading funding opportunities…</div>
         </div>
         <div class="fund-list" id="fund-list"></div>
       </div>
 
+      <div class="op-banner op-banner-info" id="plan-assumptions" hidden>
+        <div class="op-banner-title">Plan assumptions</div>
+        <ul id="plan-assumptions-list"></ul>
+      </div>
+      <div class="op-banner op-banner-warn" id="plan-warnings" hidden>
+        <div class="op-banner-title">Operational plan warnings</div>
+        <ul id="plan-warnings-list"></ul>
+      </div>
+
       <div class="plan-actions">
-        <div class="meta"><span class="dot"></span><span id="plan-saved-meta">Auto-saved · v1</span></div>
         <div class="spacer"></div>
         <button class="btn ghost" id="export-pdf-btn" type="button">Export to PDF</button>
-        <button class="btn ghost">Send to lab manager</button>
-        <button class="btn primary">Approve &amp; schedule
-          <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
-        </button>
       </div>
     </div>
   </section>
@@ -741,46 +725,11 @@ const STATE = {
 };
 
 /* =========================================================================
-   AI CLIENT
+   OFFLINE DEMO STUB — every call returns null so the curated sample-data
+   fallback paths below take over. No network requests, no API key needed.
    ========================================================================= */
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_MODEL = 'gpt-4o-mini';
-
-function looksLikeValidKey(k) {
-  return typeof k === 'string' && /^sk-[A-Za-z0-9_\-]{20,}$/.test(k.trim()) && !/dummy/i.test(k);
-}
-
-async function callAI(systemPrompt, userPrompt) {
-  if (!looksLikeValidKey(STATE.apiKey)) return null;
-  try {
-    const res = await fetch(OPENAI_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${STATE.apiKey.trim()}`
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user',   content: userPrompt }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.6
-      })
-    });
-    if (!res.ok) {
-      console.warn('OpenAI call failed:', res.status, await res.text());
-      return null;
-    }
-    const data = await res.json();
-    const txt = data?.choices?.[0]?.message?.content;
-    if (!txt) return null;
-    try { return JSON.parse(txt); } catch (e) { console.warn('Bad JSON:', e); return null; }
-  } catch (e) {
-    console.warn('Network/auth error:', e);
-    return null;
-  }
+async function callAI() {
+  return null;
 }
 
 /* =========================================================================
@@ -820,7 +769,7 @@ const SYS_REVISE = `You are revising an experimental protocol based on the scien
 const SYS_PLAN = `You are generating a complete operational experiment plan from an approved protocol. Do not invent factual claims that require live verification. Label costs, catalog numbers, equipment schedules, and performance targets as estimates or draft assumptions unless they were present in the approved protocol. Return STRICTLY this JSON:
 {
   "title": "string", "summary": "string",
-  "stats": { "budget_total": 12450, "currency": "GBP", "currency_symbol": "£", "duration_weeks": 10, "materials_count": 14, "phases": 4, "confidence": "High", "confidence_reason": "string" },
+  "stats": { "budget_total": 12450, "currency": "USD", "currency_symbol": "$", "duration_weeks": 10, "materials_count": 14, "phases": 4, "confidence": "High", "confidence_reason": "string" },
   "materials": [{ "name": "string", "spec": "string", "catalog": "string", "supplier": "string", "qty": 1, "cost": 1840, "tag": "critical" | "standard" | "bulk" }],
   "budget": {
     "rows": [{ "label": "string", "amount": 6920, "pct": 56, "color_index": 1 }],
@@ -841,7 +790,7 @@ const SYS_FUNDING = `You are a research funding advisor. Given a research projec
 {
   "intro": "1 short sentence",
   "opportunities": [
-    { "name": "string", "funder": "string", "type": "gov" | "foundation" | "industry" | "eu", "amount_min": 50000, "amount_max": 1000000, "currency_symbol": "£", "deadline": "Check official call page", "url": "https://...", "fit_score": 85, "fit_reason": "string", "description": "string" }
+    { "name": "string", "funder": "string", "type": "gov" | "foundation" | "industry" | "eu", "amount_min": 50000, "amount_max": 1000000, "currency_symbol": "$", "deadline": "Check official call page", "url": "https://...", "fit_score": 85, "fit_reason": "string", "description": "string" }
   ]
 }`;
 
@@ -901,7 +850,7 @@ const SAMPLE = {
   plan: {
     title: "Mixed-cation perovskite solar cell synthesis with compositional engineering for efficiency optimization",
     summary: "A 10-week protocol comparing FA/MA/Cs cation ratios in MAPbI₃-based devices, targeting power conversion efficiency above 23% on a 0.1 cm² active area, with full optoelectronic and stability characterization.",
-    stats: { budget_total: 12450, currency: "GBP", currency_symbol: "£", duration_weeks: 10, materials_count: 14, phases: 4, confidence: "High", confidence_reason: "Strong literature support" },
+    stats: { budget_total: 12450, currency: "USD", currency_symbol: "$", duration_weeks: 10, materials_count: 14, phases: 4, confidence: "High", confidence_reason: "Strong literature support" },
     materials: [
       { name: "Lead(II) iodide, 99.99%", spec: "PbI₂ · 5 g", catalog: "211168-5G", supplier: "Sigma-Aldrich", qty: 2, cost: 1840.00, tag: "critical" },
       { name: "Methylammonium iodide, anhydrous", spec: "MAI · 5 g", catalog: "793493-5G", supplier: "Sigma-Aldrich", qty: 1, cost: 312.00, tag: "critical" },
@@ -926,9 +875,9 @@ const SAMPLE = {
         { label: "RA personnel (0.4 FTE × 10wk)", amount: 980, pct: 8, color_index: 4 },
         { label: "Contingency (4%)", amount: 500, pct: 4, color_index: 5 }
       ],
-      metrics: { cost_per_unit: "~£520 / device", cost_per_week: "£1,245", lead_time: "8 days", reorder_risk: "Low" },
-      context_note: "Within the typical envelope for a 10-week perovskite device study at this scale (literature avg: £9k–£18k).",
-      footer_left: "Quoted prices · GBP · ex VAT"
+      metrics: { cost_per_unit: "~$520 / device", cost_per_week: "$1,245", lead_time: "8 days", reorder_risk: "Low" },
+      context_note: "Within the typical envelope for a 10-week perovskite device study at this scale (literature avg: $9k–$18k).",
+      footer_left: "Quoted prices · USD · ex VAT"
     },
     timeline: {
       weeks: 10,
@@ -964,10 +913,10 @@ const SAMPLE = {
   funding: {
     intro: "Solar PV / advanced materials projects of this scale typically draw from national agencies, EU programmes, and clean-energy foundations. Check the linked source pages for current deadlines and eligibility.",
     opportunities: [
-      { name: "EPSRC responsive-mode research grants", funder: "UK Research and Innovation (EPSRC)", type: "gov", amount_min: 50000, amount_max: 1000000, currency_symbol: "£", deadline: "Check official call page", url: "https://www.ukri.org/opportunity/standard-research-grants/", fit_score: 92, fit_reason: "Direct route for UK-based engineering and physical sciences research with a materials-science framing.", description: "Responsive-mode route for fundamental engineering and physical sciences research; eligibility and deadlines must be checked on UKRI." },
+      { name: "EPSRC responsive-mode research grants", funder: "UK Research and Innovation (EPSRC)", type: "gov", amount_min: 50000, amount_max: 1000000, currency_symbol: "$", deadline: "Check official call page", url: "https://www.ukri.org/opportunity/standard-research-grants/", fit_score: 92, fit_reason: "Direct route for UK-based engineering and physical sciences research with a materials-science framing.", description: "Responsive-mode route for fundamental engineering and physical sciences research; eligibility and deadlines must be checked on UKRI." },
       { name: "ERC frontier research grants", funder: "European Research Council", type: "eu", amount_min: 1000000, amount_max: 2500000, currency_symbol: "€", deadline: "Check official work programme", url: "https://erc.europa.eu/apply-grant", fit_score: 78, fit_reason: "Potential route if the project is framed as ambitious frontier research led by an eligible PI.", description: "ERC schemes vary by PI career stage. Use the official ERC work programme for current call dates and limits." },
       { name: "DOE Solar Energy Technologies Office funding", funder: "US Department of Energy · SETO", type: "gov", amount_min: 250000, amount_max: 3000000, currency_symbol: "$", deadline: "Check official funding page", url: "https://www.energy.gov/eere/solar/funding-opportunities", fit_score: 84, fit_reason: "Strong route for US-linked next-generation photovoltaic materials and device research.", description: "SETO periodically publishes photovoltaic funding opportunities. Current topic areas and eligibility must be verified on DOE." },
-      { name: "Royal Society industry and innovation schemes", funder: "The Royal Society", type: "foundation", amount_min: 30000, amount_max: 250000, currency_symbol: "£", deadline: "Check official grants page", url: "https://royalsociety.org/grants/", fit_score: 71, fit_reason: "Useful if the project has a credible academic-industry collaboration component.", description: "Royal Society schemes change over time; use the official grants page to identify currently open calls." }
+      { name: "Royal Society industry and innovation schemes", funder: "The Royal Society", type: "foundation", amount_min: 30000, amount_max: 250000, currency_symbol: "$", deadline: "Check official grants page", url: "https://royalsociety.org/grants/", fit_score: 71, fit_reason: "Useful if the project has a credible academic-industry collaboration component.", description: "Royal Society schemes change over time; use the official grants page to identify currently open calls." }
     ]
   }
 };
@@ -1430,7 +1379,7 @@ function fmt(n, opts={}) {
   if (typeof n !== 'number') return n;
   return n.toLocaleString('en-GB', { maximumFractionDigits: opts.dp ?? 0 });
 }
-function fmtRange(min, max, sym='£') {
+function fmtRange(min, max, sym='$') {
   if (min == null && max == null) return '—';
   if (min === max) return `${sym}${fmt(min)}`;
   if (max == null) return `${sym}${fmt(min)}+`;
@@ -1523,14 +1472,16 @@ function renderQC(qc) {
 
 function renderCandidates(data) {
   const host = $('#candidates');
+  STATE.selectedCandidateIds = new Set();
   if (!(data.candidates || []).length) {
     host.innerHTML = '<div class="qc-verdict-text">No usable source records found.</div>';
     return;
   }
-  host.innerHTML = (data.candidates || []).map(c => {
+  const cards = (data.candidates || []).map(c => {
     const sourceClass = ({ 'protocols.io': 's-proto', 'Nature Protocols': 's-nature', 'JOVE': 's-jove', 'bio-protocol': 's-bioproto', 'OpenWetWare': 's-openwet' })[c.source] || '';
     return `
       <div class="candidate" data-id="${escapeHtml(c.id)}">
+        <div class="cand-check"><input type="checkbox" data-pick="${escapeHtml(c.id)}" /></div>
         <div>
           <div class="cand-head">
             <span class="source-badge ${sourceClass}">${escapeHtml(c.source)}</span>
@@ -1541,24 +1492,52 @@ function renderCandidates(data) {
           <div class="cand-tags">${(c.highlights || []).map(t => `<span class="cand-tag">${escapeHtml(t)}</span>`).join('')}</div>
         </div>
         <div class="cand-right">
-          <div class="cand-score"><strong>${c.match_score}</strong>match</div>
-          <div class="cand-actions">
-            <button class="cand-btn" data-pick="${escapeHtml(c.id)}">Use this</button>
-            <a class="cand-link" href="${escapeHtml(c.url)}" target="_blank" rel="noopener noreferrer" title="Open source in new tab">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
-          </div>
+          <a class="cand-link" href="${escapeHtml(c.url)}" target="_blank" rel="noopener noreferrer" title="Open source in new tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
         </div>
       </div>
     `;
   }).join('');
-  $$('.cand-btn', host).forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.pick;
-      const c = data.candidates.find(x => x.id === id);
-      $$('.candidate', host).forEach(el => el.classList.toggle('is-selected', el.dataset.id === id));
-      onCandidateSelected(c);
+  host.innerHTML = `${cards}
+    <div class="picker-footer">
+      <span class="picker-count" id="picker-count">No protocols selected</span>
+      <span class="spacer"></span>
+      <button class="btn primary" id="generate-from-picks" type="button" disabled>Generate draft from <span id="picker-count-num">0</span> protocols
+        <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+      </button>
+    </div>`;
+
+  function toggle(id) {
+    if (STATE.selectedCandidateIds.has(id)) STATE.selectedCandidateIds.delete(id);
+    else STATE.selectedCandidateIds.add(id);
+    $$('.candidate', host).forEach(el => {
+      el.classList.toggle('is-selected', STATE.selectedCandidateIds.has(el.dataset.id));
+      const cb = el.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = STATE.selectedCandidateIds.has(el.dataset.id);
     });
+    const count = STATE.selectedCandidateIds.size;
+    $('#picker-count').textContent = count === 0
+      ? 'No protocols selected'
+      : `${count} protocol${count === 1 ? '' : 's'} selected`;
+    $('#picker-count-num').textContent = count;
+    $('#generate-from-picks').disabled = count === 0;
+    $('#generate-from-picks').innerHTML = `Generate draft from ${count} protocol${count === 1 ? '' : 's'}
+      <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>`;
+  }
+  $$('.candidate', host).forEach(el => {
+    const id = el.dataset.id;
+    el.addEventListener('click', e => {
+      if (e.target.closest('.cand-link')) return;
+      toggle(id);
+    });
+    const cb = el.querySelector('input[type="checkbox"]');
+    if (cb) cb.addEventListener('click', e => { e.stopPropagation(); toggle(id); });
+  });
+  $('#generate-from-picks').addEventListener('click', () => {
+    const picked = (data.candidates || []).filter(c => STATE.selectedCandidateIds.has(c.id));
+    if (!picked.length) return;
+    onCandidateSelected(picked[0]);
   });
 }
 
@@ -1603,7 +1582,7 @@ function renderPlan(plan) {
   $('#plan-blurb').textContent = plan.summary || '';
 
   const s = plan.stats || {};
-  const sym = s.currency_symbol || '£';
+  const sym = s.currency_symbol || '$';
   $('#plan-stats').innerHTML = `
     <div class="stat"><span class="k">Budget</span><span class="v"><small>${sym}</small>${fmt(s.budget_total || 0)}</span><span class="delta">±${sym}${fmt(Math.round((s.budget_total || 0)*0.06))} contingency</span></div>
     <div class="stat"><span class="k">Duration</span><span class="v">${s.duration_weeks || 0} <small>weeks</small></span><span class="delta">${s.phases || 0} phases</span></div>
@@ -1638,28 +1617,55 @@ function renderPlan(plan) {
   renderDependencies(plan.dependencies || []);
   renderValidation(plan.validation || []);
   renderFunding(STATE.funding);
+  renderPlanBanners(plan);
 
   $('#plan-generated-meta').textContent = `Generated ${new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function renderPlanBanners(plan) {
+  const assumptions = plan.assumptions || [
+    'Costs assume USD list prices, ex VAT, with academic discounting.',
+    'Equipment booking lead times reflect a single-PI lab; shared cores may extend critical path.',
+    'Personnel allocation assumes a 0.4 FTE research assistant for the synthesis phase.',
+  ];
+  const warnings = plan.warnings || [
+    'Reagent prices are rough web estimates; confirm with procurement before purchase orders.',
+    'Two materials are flagged "needs procurement confirmation" — verify catalog availability.',
+  ];
+  const aBanner = $('#plan-assumptions');
+  const wBanner = $('#plan-warnings');
+  if (assumptions.length) {
+    $('#plan-assumptions-list').innerHTML = assumptions.map(a => `<li>${escapeHtml(a)}</li>`).join('');
+    aBanner.removeAttribute('hidden');
+  } else {
+    aBanner.setAttribute('hidden', '');
+  }
+  if (warnings.length) {
+    $('#plan-warnings-list').innerHTML = warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('');
+    wBanner.removeAttribute('hidden');
+  } else {
+    wBanner.setAttribute('hidden', '');
+  }
 }
 
 function renderMaterials(materials) {
   $('#materials-count').textContent = materials.length;
   const totalReagents = materials.reduce((a, m) => a + (m.cost || 0), 0);
-  $('#materials-sub').textContent = `line items · £${fmt(totalReagents)} in reagents`;
+  $('#materials-sub').textContent = `line items · $${fmt(totalReagents)} in reagents`;
   $('#materials-tbody').innerHTML = materials.map(m => `
     <tr data-tag="${escapeHtml(m.tag || 'standard')}">
       <td class="m-name">${escapeHtml(m.name)}<small>${escapeHtml(m.spec || '')}</small></td>
       <td class="m-cat">${escapeHtml(m.catalog || '')}</td>
       <td class="m-supplier">${escapeHtml(m.supplier || '')}<span class="row-tag ${m.tag === 'critical' ? 'crit' : m.tag === 'bulk' ? 'bulk' : 'std'}">${escapeHtml((m.tag || 'standard').slice(0,1).toUpperCase() + (m.tag || 'standard').slice(1))}</span></td>
       <td style="text-align:center;">${m.qty}</td>
-      <td class="m-cost">£${fmt(m.cost, { dp: 2 })}</td>
+      <td class="m-cost">$${fmt(m.cost, { dp: 2 })}</td>
     </tr>
   `).join('');
 }
 
 const BAR_COLORS = ['var(--accent)', 'var(--ink-2)', 'var(--ok)', 'var(--warning)', 'var(--muted-2)'];
 function renderBudget(b, stats) {
-  const sym = stats.currency_symbol || '£';
+  const sym = stats.currency_symbol || '$';
   $('#budget-currency').textContent = sym;
   $('#budget-total-num').textContent = fmt(stats.budget_total || (b.rows || []).reduce((a, r) => a + r.amount, 0));
   $('#budget-context').textContent = b.context_note || '';
@@ -1748,7 +1754,7 @@ function renderFunding(funding) {
       </div>
       <div class="fund-right">
         <div class="fund-fit"><strong>${o.fit_score}</strong>fit score</div>
-        <div class="fund-amount">${fmtRange(o.amount_min, o.amount_max, o.currency_symbol || '£')}<small>award range</small></div>
+        <div class="fund-amount">${fmtRange(o.amount_min, o.amount_max, o.currency_symbol || '$')}<small>award range</small></div>
         <a class="fund-link" href="${escapeHtml(o.url || '#')}" target="_blank" rel="noopener noreferrer">View call ↗</a>
       </div>
     </div>
@@ -1938,67 +1944,52 @@ function resetToHero() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* =========================================================================
-   API KEY MODAL
-   ========================================================================= */
-function openModal() {
-  $('#api-key-input').value = STATE.apiKey || '';
-  updateModalStatus();
-  $('#modal-backdrop').classList.add('is-open');
-  setTimeout(() => $('#api-key-input').focus(), 50);
-}
-function closeModal() {
-  $('#modal-backdrop').classList.remove('is-open');
-}
-function updateModalStatus() {
-  const v = $('#api-key-input').value.trim();
-  const status = $('#modal-status');
-  status.classList.remove('ok', 'bad');
-  const textEl = status.querySelector('span:last-child');
-  if (!v || /dummy/i.test(v)) {
-    status.classList.add('bad');
-    textEl.textContent = 'Dummy key in use · sample data';
-  } else if (looksLikeValidKey(v)) {
-    status.classList.add('ok');
-    textEl.textContent = 'Key format looks valid · live AI on save';
-  } else {
-    status.classList.add('bad');
-    textEl.textContent = 'Format unrecognised · falling back';
-  }
-}
-function saveModalKey() {
-  const v = $('#api-key-input').value.trim();
-  STATE.apiKey = v || 'sk-dummy-1234567890abcdefABCDEFXX';
-  updateStatusPill();
-  closeModal();
-}
-function updateStatusPill() {
-  const pill = $('#status-pill');
-  const text = $('#status-pill-text');
-  if (looksLikeValidKey(STATE.apiKey)) {
-    pill.classList.add('is-live');
-    text.textContent = 'Live AI · GPT-4o-mini';
-  } else {
-    pill.classList.remove('is-live');
-    text.textContent = 'Sample mode';
-  }
-}
-
-function exportPlanToPdf() {
+async function exportPlanToPdf() {
   if (!STATE.plan) return;
-  const previousTitle = document.title;
-  const cleanQuestion = STATE.question
+  const slug = (STATE.question || 'protocol-plan')
     .replace(/[^a-z0-9]+/gi, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60) || 'protocol-plan';
-  document.title = `Protheus-${cleanQuestion}`;
+
+  const btn = $('#export-pdf-btn');
+  const original = btn.textContent;
+  btn.textContent = 'Preparing PDF…';
+  btn.disabled = true;
+
+  // Expand every panel so the captured PDF includes the whole plan,
+  // not just the active tab.
+  const previouslyActive = $('.tab-panel.is-active')?.id;
   $$('.tab-panel').forEach(p => p.classList.add('is-active'));
-  window.print();
-  setTimeout(() => {
-    document.title = previousTitle;
-    const activeTab = $('.tab.is-active')?.dataset.tab || 'protocol';
-    $$('.tab-panel').forEach(p => p.classList.toggle('is-active', p.id === 'panel-' + activeTab));
-  }, 300);
+
+  const planEl = $('#plan');
+  const filename = `Protheus-${slug}.pdf`;
+
+  try {
+    if (typeof html2pdf === 'function') {
+      await html2pdf()
+        .from(planEl)
+        .set({
+          margin: [10, 10, 12, 10],
+          filename,
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['.protocol-step', '.dep-card', '.val-card', '.fund-card', '.gantt'] }
+        })
+        .save();
+    } else {
+      // Fallback: native browser print dialog (Save as PDF)
+      const previousTitle = document.title;
+      document.title = `Protheus-${slug}`;
+      window.print();
+      setTimeout(() => { document.title = previousTitle; }, 300);
+    }
+  } finally {
+    btn.textContent = original;
+    btn.disabled = false;
+    if (previouslyActive) {
+      $$('.tab-panel').forEach(p => p.classList.toggle('is-active', p.id === previouslyActive));
+    }
+  }
 }
 
 /* =========================================================================
@@ -2159,20 +2150,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  $('#gear-btn').addEventListener('click', openModal);
-  $('#status-pill').addEventListener('click', openModal);
-  $('#modal-close').addEventListener('click', closeModal);
-  $('#modal-save').addEventListener('click', saveModalKey);
-  $('#modal-backdrop').addEventListener('click', e => {
-    if (e.target.id === 'modal-backdrop') closeModal();
-  });
-  $('#api-key-input').addEventListener('input', updateModalStatus);
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && $('#modal-backdrop').classList.contains('is-open')) closeModal();
-  });
-
-  updateStatusPill();
   startHeroTypewriter();
 });
 </script>
