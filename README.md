@@ -10,10 +10,7 @@
 
 <br />
 
-![Backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)
-![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-646CFF?logo=vite&logoColor=white)
-![Language](https://img.shields.io/badge/language-Python%203.11%20%7C%20TypeScript-blue)
-![Status](https://img.shields.io/badge/status-proof%20of%20concept-orange)
+[![Live at prothe.us](https://img.shields.io/badge/live%20at-prothe.us-7a2d2d?style=for-the-badge)](https://prothe.us)
 
 </div>
 
@@ -47,99 +44,7 @@ Every step in a Protheus plan is **referenced**, **customizable**, and **auditab
 | **Lab managers / procurement** | Days of spreadsheet sourcing | An automated manifest with catalog IDs and shipping lead times |
 | **Bench scientists** | Lose days to scheduling and logistics | A dependency-mapped Gantt that respects physical constraints |
 
-## Architecture
-
-Protheus is a supervised multi-agent system, deliberately not a single-prompt LLM wrapper. Three stages, each with explicit trust boundaries between generative agents and deterministic services.
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│  Stage 1 — Deterministic Literature QC                                       │
-│   Hypothesis → structured fields → OpenAlex + protocols.io + curated corpus  │
-│   Scoring: BM25 + RapidFuzz + field-level match. No LLM in the novelty path. │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  Stage 2 — Schema-Enforced Protocol Generation                               │
-│   Multi-protocol grounding + Pydantic / Instructor schemas + validation gate │
-│   Anchored in selected sources; refused outputs go back through revision.    │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  Stage 3 — Operational Planning & Feedback                                   │
-│   Material extraction → vendor resolution → budget + Gantt + funding routes  │
-│   Researcher feedback persisted in ChromaDB as long-term memory.             │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
-## Technology
-
-| Layer | Stack |
-| --- | --- |
-| **Frontend** | React 18 · TypeScript · Vite · `html2pdf.js` (lazy-loaded) · Fraunces / DM Sans / IBM Plex Mono |
-| **Backend** | FastAPI · Pydantic · Uvicorn · SQLite · `httpx` · OpenAI SDK |
-| **Retrieval** | OpenAlex · `protocols.io` API + curated corpus · BM25 + RapidFuzz field-level matching · ChromaDB + sentence-transformers (optional) |
-| **Operational planning** | Material extractor → product / image resolver → price estimator → budget calculator → timeline planner |
-| **Storage** | SQLite for sessions, versions, feedback, transparency events, operational plans |
-
-## Quickstart
-
-**Backend** (Python 3.11 recommended):
-
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-**Frontend** (in a second terminal):
-
-```bash
-cd protheus
-npm install
-npm run dev
-```
-
-Open `http://prothe.us/`. The Vite dev server proxies `/api/*` to the FastAPI process at `127.0.0.1:8000`.
-
-> On macOS, port 80 may require elevated permission. If `npm run dev` reports `EACCES: permission denied 0.0.0.0:80`, run `sudo npm run dev`.
-
-Optional NLP / vector-retrieval dependencies live in `backend/requirements-optional.txt`. They are not required for the default run and are best installed with Python 3.10 or 3.11.
-
-## Project layout
-
-```
-protheus/
-├─ backend/
-│  └─ app/
-│     ├─ main.py                  FastAPI routes
-│     ├─ services/
-│     │  ├─ openalex.py           paper retrieval + curated references
-│     │  ├─ protocols_io.py       protocol search + curated KNOWN_PROTOCOLS
-│     │  ├─ query_expansion.py    hypothesis structuring + concept matching
-│     │  ├─ qc.py                 deterministic novelty signal
-│     │  ├─ protocol_orchestrator.py    schema-enforced draft generation
-│     │  ├─ operational_plan.py   end-to-end plan compilation
-│     │  ├─ material_extractor.py / product_resolver.py / image_resolver.py
-│     │  ├─ price_estimator.py / budget_calculator.py / timeline_planner.py
-│     │  └─ protocol_db.py        SQLite persistence
-│     └─ data/                    mock protocols, validation rules
-└─ frontend/
-   └─ src/
-      ├─ App.tsx                  5-step wizard
-      ├─ components/FullPlan.tsx  7-tab plan view + PDF export
-      ├─ lib/planMock.ts          plan template + operational-plan merger
-      ├─ api.ts / types.ts        backend client + shared schemas
-      └─ styles.css               CSS variables + print stylesheet
-```
-
-## Status
-
-This is a working **proof of concept**. The end-to-end flow — query → literature QC → multi-protocol selection → researcher-review draft → operational plan with vendors, budget, timeline, and funding routes — runs locally against the bundled mock data and live OpenAlex / protocols.io when configured. Researcher feedback is captured; the long-term memory loop continues to mature with each iteration.
-
-What the next phase aims for:
-
-- **Lead-time compression** — target a 70% reduction in *hypothesis-to-bench* scoping time.
-- **Continuous improvement** — every correction sharpens the next plan.
-- **Trust-based adoption** — every line of every plan is referenced and overridable.
+---
 
 > *"While AI makes hypothesis generation effortless, the path to a concrete, executable plan remains a significant bottleneck. In a competitive research environment, this tool provides a decisive advantage by automating the logistical groundwork, allowing me to focus more on innovation and benchwork rather than administrative planning."*
 > — PI, Biotech
