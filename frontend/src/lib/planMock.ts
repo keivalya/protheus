@@ -753,6 +753,7 @@ function timelineTasksToPhases(tasks: TimelineTask[]): Plan["timeline"] {
   if (!tasks.length) {
     return { weeks: 1, phases: [], milestones: [] };
   }
+  const dayMs = 1000 * 60 * 60 * 24;
   const starts = tasks
     .map((t) => Date.parse(t.scheduled_start))
     .filter((n) => !Number.isNaN(n));
@@ -764,29 +765,62 @@ function timelineTasksToPhases(tasks: TimelineTask[]): Plan["timeline"] {
   }
   const planStart = Math.min(...starts);
   const planEnd = Math.max(...ends);
-  const dayMs = 1000 * 60 * 60 * 24;
+
+  // Round to whole-day units so bars sit on day boundaries; bump to a
+  // minimum of 2 weeks so phases that all start on day 1 don't all
+  // collapse into a single column.
   const totalDays = Math.max(1, Math.ceil((planEnd - planStart) / dayMs));
-  const weeks = Math.max(1, Math.ceil(totalDays / 7));
+  const weeks = Math.max(2, Math.ceil(totalDays / 7));
 
   const byPhase = new Map<string, TimelineTask[]>();
+  const orderByPhase = new Map<string, number>();
   for (const t of tasks) {
-    const arr = byPhase.get(t.phase) || [];
-    arr.push(t);
-    byPhase.set(t.phase, arr);
+    if (!byPhase.has(t.phase)) byPhase.set(t.phase, []);
+    byPhase.get(t.phase)!.push(t);
+    const start = Date.parse(t.scheduled_start);
+    if (!Number.isNaN(start)) {
+      const prev = orderByPhase.get(t.phase);
+      if (prev === undefined || start < prev) orderByPhase.set(t.phase, start);
+    }
   }
 
-  const phases: Phase[] = Array.from(byPhase.entries()).map(([name, group], idx) => {
-    const phaseStart = Math.min(...group.map((t) => Date.parse(t.scheduled_start)).filter((n) => !Number.isNaN(n)));
-    const phaseEnd = Math.max(...group.map((t) => Date.parse(t.scheduled_end)).filter((n) => !Number.isNaN(n)));
-    const startWeek = Math.max(0, Math.floor((phaseStart - planStart) / dayMs / 7));
-    const span = Math.max(1, Math.ceil((phaseEnd - phaseStart) / dayMs / 7));
+  const orderedPhaseNames = Array.from(byPhase.keys()).sort((a, b) => {
+    return (orderByPhase.get(a) ?? 0) - (orderByPhase.get(b) ?? 0);
+  });
+
+  const phases: Phase[] = orderedPhaseNames.map((name, idx) => {
+    const group = byPhase.get(name)!;
+    const phaseStart = Math.min(
+      ...group.map((t) => Date.parse(t.scheduled_start)).filter((n) => !Number.isNaN(n)),
+    );
+    const phaseEnd = Math.max(
+      ...group.map((t) => Date.parse(t.scheduled_end)).filter((n) => !Number.isNaN(n)),
+    );
+    // 1-indexed: startWeek=1 means W1 (so the bar sits in the first
+    // week column, not the row label column). Round up so any tasks
+    // on day 1 still end at >= W1.
+    const startWeek = Math.max(
+      1,
+      Math.floor((phaseStart - planStart) / dayMs / 7) + 1,
+    );
+    const span = Math.max(
+      1,
+      Math.ceil((phaseEnd - phaseStart) / dayMs / 7) || 1,
+    );
+    const totalHours = group.reduce(
+      (sum, t) => sum + (t.effective_hands_on_hours || t.hands_on_hours || 0),
+      0,
+    );
+    const subtitle = totalHours
+      ? `${group.length} task${group.length === 1 ? "" : "s"} · ~${Math.round(totalHours)} hr hands-on`
+      : `${group.length} task${group.length === 1 ? "" : "s"}`;
     return {
       name,
-      subtitle: `${group.length} task${group.length === 1 ? "" : "s"}`,
+      subtitle,
       startWeek,
-      duration: span,
+      duration: Math.min(span, weeks - startWeek + 1),
       colorIndex: (idx % 5) + 1,
-      label: name,
+      label: `P${idx + 1}`,
     };
   });
 
