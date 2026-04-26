@@ -315,13 +315,10 @@ function NoveltyReview({
             className="btn primary"
             type="button"
             onClick={onContinue}
-            disabled={isBusy || !result.protocols.length}
+            disabled={isBusy}
           >
             Find matching protocols <span aria-hidden="true">→</span>
           </button>
-          {!result.protocols.length ? (
-            <span className="muted-note">No protocol records to match yet.</span>
-          ) : null}
         </div>
       </div>
     </section>
@@ -403,7 +400,13 @@ function ProtocolPicker({
             />
           ))
         ) : (
-          <p className="empty">No protocol records found.</p>
+          <div className="empty-state">
+            <p className="empty">No matching protocol records were returned.</p>
+            <p className="empty-hint">
+              The literature search did not find protocols.io entries that match this query.
+              Try rephrasing the question with more specific assay or technique terms.
+            </p>
+          </div>
         )}
       </div>
     </section>
@@ -603,15 +606,6 @@ export default function App() {
         <div className="brand">
           <img className="mark" src="/logo.png" alt="" />
           <span className="name">Protheus</span>
-        </div>
-        <div className="topbar-right">
-          {isWorking ? (
-            <span className="sample-pill" title="Demo data is being used">
-              <span className="sample-dot" aria-hidden="true" />
-              Sample mode
-            </span>
-          ) : null}
-          <button className="gear-btn" type="button" aria-label="Settings">⚙</button>
         </div>
       </header>
 

@@ -47,24 +47,6 @@ a:hover { text-decoration: underline; }
 }
 .brand { display: flex; align-items: center; gap: 10px; font-family: "Fraunces", serif; font-size: 19px; font-weight: 500; }
 .brand .mark { width: 24px; height: 24px; object-fit: contain; display: block; }
-.topbar-right { display: flex; align-items: center; gap: 14px; }
-.gear-btn { width: 32px; height: 32px; border: 0; background: transparent; color: var(--ink); cursor: pointer; font-size: 20px; }
-
-.sample-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--bg-tint);
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 11px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--ink-2);
-}
-.sample-dot { width: 7px; height: 7px; border-radius: 50%; background: #c79a3a; box-shadow: 0 0 0 3px rgba(199,154,58,.15); }
 
 .stage { max-width: none; margin: 0 auto; padding: 0 32px 72px; }
 .app.is-working .stage { max-width: 1080px; }
@@ -263,7 +245,15 @@ a:hover { text-decoration: underline; }
   gap: 14px;
   padding-top: 4px;
 }
-.muted-note { color: var(--muted); font-size: 13px; }
+
+.empty-state {
+  padding: 28px 24px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.empty-state .empty { font-size: 15px; color: var(--ink-2); margin: 0 0 6px; font-weight: 500; }
+.empty-hint { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
 
 /* References */
 .refs { display: grid; gap: 10px; }
