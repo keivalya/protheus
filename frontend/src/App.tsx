@@ -77,6 +77,15 @@ function SciTitle({ html }: { html: string }) {
   return <span dangerouslySetInnerHTML={{ __html: safe }} />;
 }
 
+function stripProtocolNumbering(title: string) {
+  // Strip parenthesized phrases like "(Basic Protocol 8)", "(Alternate Protocol 2)",
+  // "(Support Protocol)", which are publisher numbering and add noise here.
+  return title
+    .replace(/\s*\([^()]*Protocol(?:\s*\d+)?\)/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function shortText(value = "", max = 140) {
   const clean = value.replace(/\s+/g, " ").trim();
   return clean.length > max ? `${clean.slice(0, max - 1).trim()}…` : clean;
@@ -373,7 +382,7 @@ function ProtocolCard({
           <span className="source-badge">{protocol.source}</span>
         </div>
         <h4 className="cand-title">
-          <SciTitle html={protocol.title} />
+          <SciTitle html={stripProtocolNumbering(protocol.title)} />
         </h4>
         <p className="cand-summary">
           {shortText(protocol.description || protocol.match_reason || "Source-linked protocol.")}
