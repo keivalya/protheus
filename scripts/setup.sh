@@ -29,13 +29,24 @@ if [[ "${1:-}" == "--optional" ]]; then
   python -m pip install -r backend/requirements-optional.txt
 else
   echo "Skipping optional Chroma/SentenceTransformers/SciSpaCy install."
-  echo "Run scripts/setup.sh --optional if you need local embedding/corpus indexing."
+  echo "Run npm run setup:optional if you need local embedding/corpus indexing."
 fi
 
 if [[ ! -f backend/.env ]]; then
   cp backend/.env.example backend/.env
   echo "Created backend/.env from backend/.env.example."
 fi
+
+echo "Initializing local SQLite database..."
+(
+  cd backend
+  python - <<'PY'
+from app.services.protocol_db import init_protocol_tables
+
+init_protocol_tables()
+print("SQLite tables are ready.")
+PY
+)
 
 echo "Installing frontend dependencies..."
 npm --prefix frontend install

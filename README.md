@@ -67,9 +67,29 @@ Optional local retrieval setup:
 
 ```bash
 npm run setup:optional
+npm run data:bootstrap
 ```
 
-That installs ChromaDB, SentenceTransformers, and SciSpaCy dependencies for local embedding/corpus indexing. It is not required for the basic demo.
+That installs ChromaDB, SentenceTransformers, and SciSpaCy, downloads the local grounding corpus, and builds the Chroma embedding index. It is not required for the basic demo.
+
+Data commands:
+
+```bash
+npm run data:init       # create/update local SQLite tables
+npm run data:download   # download and curate the local protocol corpus
+npm run data:index      # build the Chroma embedding index
+```
+
+Local runtime data is intentionally not committed:
+
+```text
+backend/app/data/ai_scientist.sqlite3
+backend/app/data/chroma/
+backend/app/data/grounding_corpus/
+backend/app/data/validation_corpus/
+backend/app/data/evaluations/
+backend/app/data/observability/
+```
 
 ---
 

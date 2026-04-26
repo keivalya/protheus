@@ -5,6 +5,10 @@
   "scripts": {
     "setup": "bash scripts/setup.sh",
     "setup:optional": "bash scripts/setup.sh --optional",
+    "data:init": "bash scripts/data.sh init-db",
+    "data:download": "bash scripts/data.sh download",
+    "data:index": "bash scripts/data.sh index",
+    "data:bootstrap": "bash scripts/data.sh bootstrap",
     "dev": "bash scripts/dev.sh",
     "dev:backend": "cd backend && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
     "dev:frontend": "npm --prefix frontend run dev",
